@@ -2,28 +2,38 @@
   "name": "tabler",
   "version": "0.1",
   "browser_action": {
-      "default_title": "Show the popup",
-      "default_popup": "popup.html",
-      "default_icon": {
-        "19": "icon19.png",
-        "38": "icon38.png"
-      }
-
+    "default_title": "Show the popup",
+    "scripts": ["handler.js"],
+    "default_icon": {
+      "19": "icon19.png",
+      "38": "icon38.png"
+    }
   },
   "icons": {
     "16": "icon16.png",
     "48": "icon48.png",
     "128": "icon128.png"
   },
- "content_scripts": [
+  "permissions": [
+    "tabs"
+  ],
+  "content_scripts": [
     {
-      "matches": ["*://*/*"],
-      "js": ["tabler.js", "content.js"],
+      "matches": [
+        "*://*/*"
+      ],
+      "js": [
+        "tabler.js",
+        "content.js"
+      ],
       "run_at": "document_end"
     }
   ],
   "background": {
-    "scripts": ["tabler.js", "background.js"],
+    "scripts": [
+      "tabler.js",
+      "background.js"
+    ],
     "persistent": false
   },
   "manifest_version": 2
