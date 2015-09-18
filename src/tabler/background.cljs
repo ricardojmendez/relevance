@@ -1,12 +1,13 @@
 (ns tabler.background
-  (:require [khroma.log :as console]
+  (:require [cljs.core.async :refer [>! <!]]
+            [khroma.log :as console]
             [khroma.runtime :as runtime]
-            [cljs.core.async :refer [>! <!]])
+            [khroma.windows :as windows])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (defn init []
-  (go (let [conns (runtime/connections)
+  (go (let [conns   (runtime/connections)
             content (<! conns)]
-        (console/log "Content script said: " (<! content))
-        (>! content :fml-i-am-the-background-script)
+        (console/log "On background. Got message: " (<! content))
+        (>! content (.-tabs (<! (windows/get-current))))
         (init))))
