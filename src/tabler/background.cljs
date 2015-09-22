@@ -9,5 +9,5 @@
   (go (let [conns   (runtime/connections)
             content (<! conns)]
         (console/log "On background. Got message: " (<! content))
-        (>! content (.-tabs (<! (windows/get-current))))
+        (>! content "Hello from background")
         (init))))

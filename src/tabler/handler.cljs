@@ -9,7 +9,7 @@
 
 (defn init []
   (console/log "tabler.handler.init")
-  (let [conns (browser/on-click)]
+  (let [conns (browser/on-clicked)]
     (go (while true
           (let [tab (<! conns)]
             (console/log "On click handler. Tab: " tab)

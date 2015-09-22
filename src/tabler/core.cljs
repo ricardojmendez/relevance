@@ -3,6 +3,7 @@
             [clojure.walk :as walk]
             [khroma.runtime :as runtime]
             [khroma.log :as console]
+            [khroma.storage :as storage]
             [khroma.tabs :as tabs]
             [reagent.core :as reagent]
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
@@ -44,6 +45,12 @@
   [col id]
   (remove #(= (:id %) id) col))
 
+(register-handler
+  :log-content
+  (fn [app-state [_ content]]
+    (console/log "Log event:" content)
+    app-state
+    ))
 
 (register-handler
   :tab-updated
@@ -85,14 +92,20 @@
 (defn tab-list []
   (let [tabs (subscribe [:tabs])]
     (fn []
-      [:table {:class "table table-striped table-hover"}
-       [:thead
-        [:tr
-         [:th "#"]
-         [:th "Title"]
-         [:th "URL"]]]
-       [:tbody
-        (list-tabs @tabs)]
+      [:div
+       [:table {:class "table table-striped table-hover"}
+        [:thead
+         [:tr
+          [:th "#"]
+          [:th "Title"]
+          [:th "URL"]]]
+        [:tbody
+         (list-tabs @tabs)]
+        ]
+       [:button {:on-click #(storage/set {:links (map (fn [m] (select-keys m [:index :url])) @tabs)})} "Save me"]
+       [:button {:on-click #(go (console/log (<! (storage/get nil))))} "Get"]
+       [:button {:on-click #(go (console/log "Usage: " (<! (storage/bytes-in-use nil))))} "Usage"]
+       [:button {:on-click #(storage/clear)} "Clear"]
        ])))
 
 
@@ -118,6 +131,7 @@
   (go (let [c (<! (windows/get-current))]
         (dispatch [:initialize (:tabs c)])))
   (let [bg (runtime/connect)]
+    (dispatch-on-channel :log-content storage/on-changed)
     (dispatch-on-channel :tab-created tabs/tab-created-events)
     (dispatch-on-channel :tab-removed tabs/tab-removed-events)
     (dispatch-on-channel :tab-updated tabs/tab-updated-events)
