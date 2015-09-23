@@ -1,1 +1,1 @@
-tabler.core.init();
+booklet.core.init();

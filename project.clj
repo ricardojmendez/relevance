@@ -1,4 +1,4 @@
-(defproject tabler "0.1.0-SNAPSHOT"
+(defproject booklet-chrome "0.1.0-SNAPSHOT"
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0"]
@@ -12,7 +12,7 @@
                                  [lein-chromebuild "0.3.0"]]
                    :cljsbuild   {:builds {:main
                                           {:source-paths ["src"]
-                                           :compiler     {:output-to     "target/unpacked/tabler.js"
+                                           :compiler     {:output-to     "target/unpacked/booklet.js"
                                                           :output-dir    "target/js"
                                                           :optimizations :whitespace
                                                           :pretty-print  true}}}}

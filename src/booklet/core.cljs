@@ -1,4 +1,4 @@
-(ns tabler.core
+(ns booklet.core
   (:require [cljs.core.async :refer [>! <!]]
             [khroma.runtime :as runtime]
             [khroma.log :as console]
@@ -101,9 +101,10 @@
      [:td (:url tab)]]))
 
 (defn tab-list []
-  (let [tabs (subscribe [:tabs])]
+  (let [tabs (reaction (filter-tabs @(subscribe [:tabs])))]
     (fn []
       [:div
+       [:div {:class "page-header"} [:h2 "Current tabs"]]
        [:table {:class "table table-striped table-hover"}
         [:thead
          [:tr
@@ -140,7 +141,7 @@
 
 
 (defn init []
-  (console/log "Initialized tabler.core")
+  (console/log "Initialized booklet.core")
   (go (let [c (<! (windows/get-current))]
         (dispatch [:initialize (:tabs c)])))
   (let [bg (runtime/connect)]

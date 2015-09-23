@@ -1,1 +1,1 @@
-tabler.handler.init();
+booklet.handler.init();

@@ -1,4 +1,4 @@
-(ns tabler.handler
+(ns booklet.handler
   (:require [khroma.log :as console]
             [khroma.browser :as browser]
             [khroma.tabs :as tabs]
@@ -8,7 +8,7 @@
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (defn init []
-  (console/log "tabler.handler.init")
+  (console/log "booklet.handler.init")
   (let [conns (browser/on-clicked)]
     (go (while true
           (let [tab (<! conns)]

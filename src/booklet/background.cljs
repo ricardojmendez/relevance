@@ -1,4 +1,4 @@
-(ns tabler.background
+(ns booklet.background
   (:require [cljs.core.async :refer [>! <!]]
             [khroma.log :as console]
             [khroma.runtime :as runtime]

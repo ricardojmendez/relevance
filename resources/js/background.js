@@ -1,2 +1,2 @@
 
-tabler.background.init();
+booklet.background.init();
