@@ -117,9 +117,11 @@
   "Dispatched msg when there's content received on the channel returned by
   function chan-f."
   [msg chan-f]
-  (go (while true
-        (let [content (<! (chan-f))]
-          (dispatch [msg content])))))
+  (let [channel (chan-f)]
+    (go (while true
+          (let [content (<! channel)]
+            (dispatch [msg content]))))
+    ))
 
 
 (defn mount-components []
