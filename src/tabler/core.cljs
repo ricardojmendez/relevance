@@ -74,7 +74,9 @@
   :tab-replaced
   (fn [app-state [_ msg]]
     (console/log "Replaced:" msg)
-    app-state))
+    ; We don't need to create a new item for the tab being added, as
+    ; we'll also get an "update" message which will add it.
+    (assoc app-state :tabs (remove-tab (:tabs app-state) (:removed msg)))))
 
 ;;;;----------------------------
 ;;;; Components
