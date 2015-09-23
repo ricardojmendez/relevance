@@ -6,7 +6,7 @@
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 (defn init []
-  (go (let [conns   (runtime/connections)
+  (go (let [conns   (runtime/on-connect)
             content (<! conns)]
         (console/log "On background. Got message: " (<! content))
         (>! content "Hello from background")

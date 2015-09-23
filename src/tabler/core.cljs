@@ -103,8 +103,8 @@
          (list-tabs @tabs)]
         ]
        [:button {:on-click #(storage/set {:links (map (fn [m] (select-keys m [:index :url])) @tabs)})} "Save me"]
-       [:button {:on-click #(go (console/log (<! (storage/get nil))))} "Get"]
-       [:button {:on-click #(go (console/log "Usage: " (<! (storage/bytes-in-use nil))))} "Usage"]
+       [:button {:on-click #(go (console/log (<! (storage/get))))} "Get"]
+       [:button {:on-click #(go (console/log "Usage: " (<! (storage/bytes-in-use))))} "Usage"]
        [:button {:on-click #(storage/clear)} "Clear"]
        ])))
 
@@ -134,10 +134,10 @@
         (dispatch [:initialize (:tabs c)])))
   (let [bg (runtime/connect)]
     (dispatch-on-channel :log-content storage/on-changed)
-    (dispatch-on-channel :tab-created tabs/tab-created-events)
-    (dispatch-on-channel :tab-removed tabs/tab-removed-events)
-    (dispatch-on-channel :tab-updated tabs/tab-updated-events)
-    (dispatch-on-channel :tab-replaced tabs/tab-replaced-events)
+    (dispatch-on-channel :tab-created tabs/on-created)
+    (dispatch-on-channel :tab-removed tabs/on-removed)
+    (dispatch-on-channel :tab-updated tabs/on-updated)
+    (dispatch-on-channel :tab-replaced tabs/on-replaced)
     (go (>! bg :lol-i-am-a-popup)
         (console/log "Background said: " (<! bg))))
   (mount-components))
