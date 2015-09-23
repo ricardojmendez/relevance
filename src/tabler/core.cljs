@@ -1,6 +1,5 @@
 (ns tabler.core
   (:require [cljs.core.async :refer [>! <!]]
-            [clojure.walk :as walk]
             [khroma.runtime :as runtime]
             [khroma.log :as console]
             [khroma.storage :as storage]
@@ -77,6 +76,16 @@
     ; We don't need to create a new item for the tab being added, as
     ; we'll also get an "update" message which will add it.
     (assoc app-state :tabs (remove-tab (:tabs app-state) (:removed msg)))))
+
+;;;;----------------------------
+;;;; Functions
+;;;;----------------------------
+
+(defn filter-tabs
+  "Filters out the tabs we will not show or manipulate, for instance, chrome extensions"
+  [tabs]
+  (remove #(.startsWith (:url %) "chrome") tabs))
+
 
 ;;;;----------------------------
 ;;;; Components
