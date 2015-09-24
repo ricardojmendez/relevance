@@ -1,5 +1,6 @@
 (ns booklet.core
   (:require [cljs.core.async :refer [>! <!]]
+            [cljsjs.react-bootstrap]
             [khroma.runtime :as runtime]
             [khroma.log :as console]
             [khroma.storage :as storage]
@@ -11,6 +12,9 @@
                    [reagent.ratom :refer [reaction]]))
 
 
+
+
+
 ;;;;------------------------------
 ;;;; Queries
 ;;;;------------------------------
@@ -19,7 +23,37 @@
   [db path]
   (reaction (get-in @db path)))
 
-(register-sub :tabs general-query)
+(register-sub :data general-query)
+(register-sub :ui-state general-query)
+
+
+;;;;----------------------------
+;;;; Functions
+;;;;----------------------------
+
+(defn dispatch-on-press-enter [e d]
+  (if (= 13 (.-which e))
+    (dispatch d)))
+
+
+
+(defn filter-tabs
+  "Filters out the tabs we will not show or manipulate, for instance, chrome extensions"
+  [tabs]
+  (remove #(.startsWith (:url %) "chrome") tabs))
+
+(defn group-from-tabs
+  "Takes a tabset and returns a new group containing them and some extra data"
+  [tabs]
+  {:date (.now js/Date)
+   :tabs tabs})
+
+(defn group-label [group]
+  (or (:name group) (:date group)))
+
+(def initial-focus-wrapper
+  (with-meta identity
+             {:component-did-mount #(.focus (reagent/dom-node %))}))
 
 
 ;;;;----------------------------
@@ -30,14 +64,75 @@
   :initialize
   (fn [_ [_ tabs]]
     (.log js/console tabs)
-    (console/log "Initialized" tabs)
-    {:tabs tabs}))
+    (console/trace "Initializing with:" tabs)
+    (go (dispatch [:storage-loaded (<! (storage/get))]))
+    {:data {:tabs tabs}}))
+
+(register-handler
+  :group-delete-set
+  (fn [app-state [_ group]]
+    (dispatch [:modal-info-set {:header       "Please confirm"
+                                :body         (str "Do you want to delete tab group " (group-label group) "?")
+                                :action-label "Kill it"
+                                :action       #(do
+                                                (dispatch [:modal-info-set nil])
+                                                (dispatch [:group-delete group]))}])
+    app-state))
+
+(register-handler
+  :group-delete
+  (fn [app-state [_ group]]
+    (let [original (get-in app-state [:data :groups])
+          groups   (remove #(= group %) original)]
+      (dispatch [:groups-set groups])
+      app-state)))
+
+
+(register-handler
+  :group-edit-set
+  (fn [app-state [_ group]]
+    (dispatch [:group-label-set (group-label group)])
+    (assoc-in app-state [:ui-state :group-edit] group)))
+
+
+(register-handler
+  :group-label-set
+  (fn [app-state [_ label]]
+    (assoc-in app-state [:ui-state :group-label] label)))
+
+(register-handler
+  :group-update
+  (fn [app-state [_ old-group new-group]]
+    (dispatch [:groups-set (->> (get-in app-state [:data :groups])
+                                (remove #(= % old-group))
+                                (cons new-group))])
+    app-state))
+
+
+(register-handler
+  :groups-set
+  (fn [app-state [_ groups]]
+    (storage/set {:groups groups})
+    (assoc-in app-state [:data :groups] groups)
+    ))
+
+(register-handler
+  :modal-info-set
+  (fn [app-state [_ info]]
+    (assoc-in app-state [:ui-state :modal-info] info)))
+
+(register-handler
+  :storage-loaded
+  (fn [app-state [_ data]]
+    (console/trace "Storage loaded:" data)
+    (assoc-in app-state [:data :groups] (:groups data))
+    ))
 
 (register-handler
   :tab-created
   (fn [app-state [_ msg]]
-    (console/log "Created" (:tab msg))
-    (assoc app-state :tabs (conj (:tabs app-state) (:tab msg)))))
+    (console/trace "Created" (:tab msg))
+    (assoc app-state [:data :tabs] (conj (get-in app-state [:data :tabs]) (:tab msg)))))
 
 (defn remove-tab
   "Removed a tab from a collection by id"
@@ -54,43 +149,77 @@
 (register-handler
   :tab-updated
   (fn [app-state [_ msg]]
-    (console/log "Updated:" msg)
-    (assoc app-state
-      :tabs
-      (-> (:tabs app-state)
-          (remove-tab (:tabId msg))
-          (conj (:tab msg))))
+    (console/trace "Updated:" msg)
+    (assoc-in app-state
+              [:data :tabs]
+              (-> (get-in app-state [:data :tabs])
+                  (remove-tab (:tabId msg))
+                  (conj (:tab msg))))
     ))
-
 
 (register-handler
   :tab-removed
   (fn [app-state [_ msg]]
-    (console/log "Removed:" (:tabId msg) msg)
-    (assoc app-state :tabs (remove-tab (:tabs app-state) (:tabId msg)))))
+    (console/trace "Removed:" (:tabId msg) msg)
+    (assoc-in app-state [:data :tabs] (remove-tab (get-in app-state [:data :tabs]) (:tabId msg)))))
 
 (register-handler
   :tab-replaced
   (fn [app-state [_ msg]]
-    (console/log "Replaced:" msg)
+    (console/trace "Replaced:" msg)
     ; We don't need to create a new item for the tab being added, as
     ; we'll also get an "update" message which will add it.
-    (assoc app-state :tabs (remove-tab (:tabs app-state) (:removed msg)))))
+    (assoc-in app-state [:data :tabs] (remove-tab (get-in app-state [:data :tabs]) (:removed msg)))))
 
-;;;;----------------------------
-;;;; Functions
-;;;;----------------------------
 
-(defn filter-tabs
-  "Filters out the tabs we will not show or manipulate, for instance, chrome extensions"
-  [tabs]
-  (remove #(.startsWith (:url %) "chrome") tabs))
+(register-handler
+  :tabset-save
+  (fn [app-state [_]]
+    (let [tabs    (get-in app-state [:data :tabs])
+          to-save (map (fn [m] (select-keys m [:index :url :id :title])) tabs)
+          groups  (conj (or (get-in app-state [:data :groups]) '())
+                        (group-from-tabs to-save))]
+      (dispatch [:groups-set groups])
+      app-state)))
+
+;;;;------------------------------
+;;;; Utils
+;;;;------------------------------
+
+(def Modal (reagent/adapt-react-class js/ReactBootstrap.Modal))
+(def ModalBody (reagent/adapt-react-class js/ReactBootstrap.ModalBody))
+(def ModalFooter (reagent/adapt-react-class js/ReactBootstrap.ModalFooter))
+(def ModalHeader (reagent/adapt-react-class js/ReactBootstrap.ModalHeader))
+(def ModalTitle (reagent/adapt-react-class js/ReactBootstrap.ModalTitle))
+(def ModalTrigger (reagent/adapt-react-class js/ReactBootstrap.ModalTrigger))
+
 
 
 ;;;;----------------------------
 ;;;; Components
 ;;;;----------------------------
 
+
+(defn modal-confirm []
+  (let [modal-info (subscribe [:ui-state :modal-info])
+        ;; On the next one, we can't use not-empty because (= nil (not-empty nil)), and :show expects true/false,
+        ;; not a truth-ish value.
+        show?      (reaction (not (empty? @modal-info)))]
+    (fn []
+      [Modal {:show @show? :onHide #(dispatch [:modal-info-set nil])}
+       [ModalHeader
+        [:h4 (:header @modal-info)]]
+       [ModalBody
+        [:div
+         (:body @modal-info)]]
+       [ModalFooter
+        [:button {:type     "reset"
+                  :class    "btn btn-default"
+                  :on-click #(dispatch [:modal-info-set nil])} "Cancel"]
+        [:button {:type     "submit"
+                  :class    "btn btn-primary"
+                  :on-click (:action @modal-info)} (:action-label @modal-info)]
+        ]])))
 
 (defn list-tabs [tabs]
   (for [tab (sort-by :index tabs)]
@@ -101,9 +230,10 @@
      [:td (:url tab)]]))
 
 (defn tab-list []
-  (let [tabs (reaction (filter-tabs @(subscribe [:tabs])))]
+  (let [tabs (reaction (filter-tabs @(subscribe [:data :tabs])))]
     (fn []
       [:div
+       [modal-confirm]
        [:div {:class "page-header"} [:h2 "Current tabs"]]
        [:table {:class "table table-striped table-hover"}
         [:thead
@@ -114,11 +244,53 @@
         [:tbody
          (list-tabs @tabs)]
         ]
-       [:button {:on-click #(storage/set {:links (map (fn [m] (select-keys m [:index :url])) @tabs)})} "Save me"]
+       [:button {:on-click #(dispatch [:tabset-save])} "Save me"]
        [:button {:on-click #(go (console/log (<! (storage/get))))} "Get"]
        [:button {:on-click #(go (console/log "Usage: " (<! (storage/bytes-in-use))))} "Usage"]
        [:button {:on-click #(storage/clear)} "Clear"]
        ])))
+
+
+(defn tab-groups []
+  (let [tab-groups (subscribe [:data :groups])
+        group-edit (subscribe [:ui-state :group-edit])
+        label      (subscribe [:ui-state :group-label])
+        to-list    (reaction (sort-by #(* -1 (:date %)) @tab-groups))]
+    (fn []
+      [:div
+       [:div {:class "page-header"} [:h2 "Previous groups"]]
+       (doall
+         (for [group @to-list]
+           ^{:key (:date group)}
+           [:div
+            [:div
+             (if (= group @group-edit)
+               [initial-focus-wrapper
+                [:input {:type      "text"
+                         :class     "form-control"
+                         :value     @label
+                         :on-change #(dispatch-sync [:group-label-set (-> % .-target .-value)])
+                         :on-blur   #(do
+                                      (dispatch [:group-update group (assoc group :name @label)])
+                                      (dispatch [:group-edit-set nil]))
+                         }]]
+               [:h3 {:on-click #(dispatch [:group-edit-set group])} (group-label group)]
+               )
+             [:small [:a {:on-click #(dispatch [:group-delete-set group])} "Delete"]]
+             ]
+
+            [:table {:class "table table-striped table-hover"}
+             [:thead
+              [:tr
+               [:th "#"]
+               [:th "Title"]
+               [:th "URL"]]]
+             [:tbody
+              (list-tabs (filter-tabs (:tabs group)))]
+             ]]))
+       ]
+      )
+    ))
 
 
 ;;;;----------------------------
@@ -137,7 +309,8 @@
 
 
 (defn mount-components []
-  (reagent/render-component [tab-list] (.getElementById js/document "tab-list")))
+  (reagent/render-component [tab-list] (.getElementById js/document "tab-list"))
+  (reagent/render-component [tab-groups] (.getElementById js/document "tab-groups")))
 
 
 (defn init []
