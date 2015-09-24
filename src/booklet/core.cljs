@@ -20,6 +20,24 @@
   (reaction (get-in @db path)))
 
 (register-sub :tabs general-query)
+(register-sub :groups general-query)
+
+
+;;;;----------------------------
+;;;; Functions
+;;;;----------------------------
+
+(defn filter-tabs
+  "Filters out the tabs we will not show or manipulate, for instance, chrome extensions"
+  [tabs]
+  (remove #(.startsWith (:url %) "chrome") tabs))
+
+
+(defn group-from-tabs
+  "Takes a tabset and returns a new group containing them and some extra data"
+  [tabs]
+  {:date (.now js/Date)
+   :tabs tabs})
 
 
 ;;;;----------------------------
@@ -30,13 +48,21 @@
   :initialize
   (fn [_ [_ tabs]]
     (.log js/console tabs)
-    (console/log "Initialized" tabs)
+    (console/trace "Initialized" tabs)
+    (go (dispatch [:storage-loaded (<! (storage/get))]))
     {:tabs tabs}))
+
+(register-handler
+  :storage-loaded
+  (fn [app-state [_ data]]
+    (console/trace "Storage loaded:" data)
+    (assoc app-state :groups (:groups data))
+    ))
 
 (register-handler
   :tab-created
   (fn [app-state [_ msg]]
-    (console/log "Created" (:tab msg))
+    (console/trace "Created" (:tab msg))
     (assoc app-state :tabs (conj (:tabs app-state) (:tab msg)))))
 
 (defn remove-tab
@@ -54,7 +80,7 @@
 (register-handler
   :tab-updated
   (fn [app-state [_ msg]]
-    (console/log "Updated:" msg)
+    (console/trace "Updated:" msg)
     (assoc app-state
       :tabs
       (-> (:tabs app-state)
@@ -66,25 +92,28 @@
 (register-handler
   :tab-removed
   (fn [app-state [_ msg]]
-    (console/log "Removed:" (:tabId msg) msg)
+    (console/trace "Removed:" (:tabId msg) msg)
     (assoc app-state :tabs (remove-tab (:tabs app-state) (:tabId msg)))))
 
 (register-handler
   :tab-replaced
   (fn [app-state [_ msg]]
-    (console/log "Replaced:" msg)
+    (console/trace "Replaced:" msg)
     ; We don't need to create a new item for the tab being added, as
     ; we'll also get an "update" message which will add it.
     (assoc app-state :tabs (remove-tab (:tabs app-state) (:removed msg)))))
 
-;;;;----------------------------
-;;;; Functions
-;;;;----------------------------
 
-(defn filter-tabs
-  "Filters out the tabs we will not show or manipulate, for instance, chrome extensions"
-  [tabs]
-  (remove #(.startsWith (:url %) "chrome") tabs))
+(register-handler
+  :tabset-save
+  (fn [app-state [_]]
+    (let [tabs    (:tabs app-state)
+          to-save (map (fn [m] (select-keys m [:index :url :id :title])) tabs)
+          groups  (conj (or (:groups app-state) '())
+                        (group-from-tabs to-save))]
+      (storage/set {:groups groups})
+      (assoc app-state :groups groups))
+    ))
 
 
 ;;;;----------------------------
@@ -114,11 +143,37 @@
         [:tbody
          (list-tabs @tabs)]
         ]
-       [:button {:on-click #(storage/set {:links (map (fn [m] (select-keys m [:index :url])) @tabs)})} "Save me"]
+       [:button {:on-click #(dispatch [:tabset-save])} "Save me"]
        [:button {:on-click #(go (console/log (<! (storage/get))))} "Get"]
        [:button {:on-click #(go (console/log "Usage: " (<! (storage/bytes-in-use))))} "Usage"]
        [:button {:on-click #(storage/clear)} "Clear"]
        ])))
+
+(defn list-groups [groups]
+  (console/log "list-groups" groups)
+  (for [group groups]
+    ^{:key (:date group)}
+    [:div
+     [:h3 (:date group)]
+     [:table {:class "table table-striped table-hover"}
+      [:thead
+       [:tr
+        [:th "#"]
+        [:th "Title"]
+        [:th "URL"]]]
+      [:tbody
+       (list-tabs (filter-tabs (:tabs group)))]
+      ]]))
+
+(defn tab-groups []
+  (let [tab-groups (subscribe [:groups])]
+    (fn []
+      [:div
+       [:div {:class "page-header"} [:h2 "Previous groups"]]
+       (list-groups (sort-by #(* -1 (:date %)) @tab-groups))
+       ]
+      )
+    ))
 
 
 ;;;;----------------------------
@@ -137,7 +192,8 @@
 
 
 (defn mount-components []
-  (reagent/render-component [tab-list] (.getElementById js/document "tab-list")))
+  (reagent/render-component [tab-list] (.getElementById js/document "tab-list"))
+  (reagent/render-component [tab-groups] (.getElementById js/document "tab-groups")))
 
 
 (defn init []

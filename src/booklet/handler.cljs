@@ -13,8 +13,6 @@
     (go (while true
           (let [tab (<! conns)]
             (console/log "On click handler. Tab: " tab)
-            (console/log "Listing tabs for the current window...")
-            (tabs/create {:url (str (ext/get-url "/" ) "index.html")})
-            (doseq [t (.-tabs (<! (windows/get-current)))]
-              (console/log "Tab: " t)))
+            ; TODO: Open only if we don't have one on the current window
+            (tabs/create {:url (str (ext/get-url "/" ) "index.html")}))
           ))))
