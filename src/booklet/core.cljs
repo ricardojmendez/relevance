@@ -31,17 +31,29 @@
 ;;;; Functions
 ;;;;----------------------------
 
+(defn dispatch-on-press-enter [e d]
+  (if (= 13 (.-which e))
+    (dispatch d)))
+
+
+
 (defn filter-tabs
   "Filters out the tabs we will not show or manipulate, for instance, chrome extensions"
   [tabs]
   (remove #(.startsWith (:url %) "chrome") tabs))
-
 
 (defn group-from-tabs
   "Takes a tabset and returns a new group containing them and some extra data"
   [tabs]
   {:date (.now js/Date)
    :tabs tabs})
+
+(defn group-label [group]
+  (or (:name group) (:date group)))
+
+(def initial-focus-wrapper
+  (with-meta identity
+             {:component-did-mount #(.focus (reagent/dom-node %))}))
 
 
 ;;;;----------------------------
@@ -60,21 +72,42 @@
   :group-delete-set
   (fn [app-state [_ group]]
     (dispatch [:modal-info-set {:header       "Please confirm"
-                                :body         (str "Do you want to delete tab group " (:date group) "?")
+                                :body         (str "Do you want to delete tab group " (group-label group) "?")
                                 :action-label "Kill it"
                                 :action       #(do
                                                 (dispatch [:modal-info-set nil])
                                                 (dispatch [:group-delete group]))}])
-    app-state
-    ))
+    app-state))
 
 (register-handler
   :group-delete
   (fn [app-state [_ group]]
     (let [original (get-in app-state [:data :groups])
-          groups (remove #(= group %) original)]
+          groups   (remove #(= group %) original)]
       (dispatch [:groups-set groups])
       app-state)))
+
+
+(register-handler
+  :group-edit-set
+  (fn [app-state [_ group]]
+    (dispatch [:group-label-set (group-label group)])
+    (assoc-in app-state [:ui-state :group-edit] group)))
+
+
+(register-handler
+  :group-label-set
+  (fn [app-state [_ label]]
+    (assoc-in app-state [:ui-state :group-label] label)))
+
+(register-handler
+  :group-update
+  (fn [app-state [_ old-group new-group]]
+    (dispatch [:groups-set (->> (get-in app-state [:data :groups])
+                                (remove #(= % old-group))
+                                (cons new-group))])
+    app-state))
+
 
 (register-handler
   :groups-set
@@ -217,33 +250,44 @@
        [:button {:on-click #(storage/clear)} "Clear"]
        ])))
 
-(defn list-groups [groups]
-  (console/log "list-groups" groups)
-  (for [group groups]
-    ^{:key (:date group)}
-    [:div
-     [:div
-      [:h3 {:on-click #(dispatch [:group-edit-set group])} (or (:date group) (:name group))]
-      [:input {:type "text" :class "form-control" :on-blur #(console/log "Blurring" group)}]
-      [:small [:a {:on-click #(dispatch [:group-delete-set group])} "Delete"]]
-      ]
-
-     [:table {:class "table table-striped table-hover"}
-      [:thead
-       [:tr
-        [:th "#"]
-        [:th "Title"]
-        [:th "URL"]]]
-      [:tbody
-       (list-tabs (filter-tabs (:tabs group)))]
-      ]]))
 
 (defn tab-groups []
-  (let [tab-groups (subscribe [:data :groups])]
+  (let [tab-groups (subscribe [:data :groups])
+        group-edit (subscribe [:ui-state :group-edit])
+        label      (subscribe [:ui-state :group-label])
+        to-list    (reaction (sort-by #(* -1 (:date %)) @tab-groups))]
     (fn []
       [:div
        [:div {:class "page-header"} [:h2 "Previous groups"]]
-       (list-groups (sort-by #(* -1 (:date %)) @tab-groups))
+       (doall
+         (for [group @to-list]
+           ^{:key (:date group)}
+           [:div
+            [:div
+             (if (= group @group-edit)
+               [initial-focus-wrapper
+                [:input {:type      "text"
+                         :class     "form-control"
+                         :value     @label
+                         :on-change #(dispatch-sync [:group-label-set (-> % .-target .-value)])
+                         :on-blur   #(do
+                                      (dispatch [:group-update group (assoc group :name @label)])
+                                      (dispatch [:group-edit-set nil]))
+                         }]]
+               [:h3 {:on-click #(dispatch [:group-edit-set group])} (group-label group)]
+               )
+             [:small [:a {:on-click #(dispatch [:group-delete-set group])} "Delete"]]
+             ]
+
+            [:table {:class "table table-striped table-hover"}
+             [:thead
+              [:tr
+               [:th "#"]
+               [:th "Title"]
+               [:th "URL"]]]
+             [:tbody
+              (list-tabs (filter-tabs (:tabs group)))]
+             ]]))
        ]
       )
     ))
