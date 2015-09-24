@@ -1,5 +1,6 @@
 (ns booklet.core
   (:require [cljs.core.async :refer [>! <!]]
+            [cljsjs.react-bootstrap]
             [khroma.runtime :as runtime]
             [khroma.log :as console]
             [khroma.storage :as storage]
@@ -11,6 +12,9 @@
                    [reagent.ratom :refer [reaction]]))
 
 
+
+
+
 ;;;;------------------------------
 ;;;; Queries
 ;;;;------------------------------
@@ -20,7 +24,7 @@
   (reaction (get-in @db path)))
 
 (register-sub :data general-query)
-(register-sub :state general-query)
+(register-sub :ui-state general-query)
 
 
 ;;;;----------------------------
@@ -53,6 +57,38 @@
     {:data {:tabs tabs}}))
 
 (register-handler
+  :group-delete-set
+  (fn [app-state [_ group]]
+    (dispatch [:modal-info-set {:header       "Please confirm"
+                                :body         (str "Do you want to delete tab group " (:date group) "?")
+                                :action-label "Kill it"
+                                :action       #(do
+                                                (dispatch [:modal-info-set nil])
+                                                (dispatch [:group-delete group]))}])
+    app-state
+    ))
+
+(register-handler
+  :group-delete
+  (fn [app-state [_ group]]
+    (let [original (get-in app-state [:data :groups])
+          groups (remove #(= group %) original)]
+      (dispatch [:groups-set groups])
+      app-state)))
+
+(register-handler
+  :groups-set
+  (fn [app-state [_ groups]]
+    (storage/set {:groups groups})
+    (assoc-in app-state [:data :groups] groups)
+    ))
+
+(register-handler
+  :modal-info-set
+  (fn [app-state [_ info]]
+    (assoc-in app-state [:ui-state :modal-info] info)))
+
+(register-handler
   :storage-loaded
   (fn [app-state [_ data]]
     (console/trace "Storage loaded:" data)
@@ -82,12 +118,11 @@
   (fn [app-state [_ msg]]
     (console/trace "Updated:" msg)
     (assoc-in app-state
-      [:data :tabs]
-      (-> (get-in app-state [:data :tabs])
-          (remove-tab (:tabId msg))
-          (conj (:tab msg))))
+              [:data :tabs]
+              (-> (get-in app-state [:data :tabs])
+                  (remove-tab (:tabId msg))
+                  (conj (:tab msg))))
     ))
-
 
 (register-handler
   :tab-removed
@@ -111,15 +146,47 @@
           to-save (map (fn [m] (select-keys m [:index :url :id :title])) tabs)
           groups  (conj (or (get-in app-state [:data :groups]) '())
                         (group-from-tabs to-save))]
-      (storage/set {:groups groups})
-      (assoc-in app-state [:data :groups] groups))
-    ))
+      (dispatch [:groups-set groups])
+      app-state)))
+
+;;;;------------------------------
+;;;; Utils
+;;;;------------------------------
+
+(def Modal (reagent/adapt-react-class js/ReactBootstrap.Modal))
+(def ModalBody (reagent/adapt-react-class js/ReactBootstrap.ModalBody))
+(def ModalFooter (reagent/adapt-react-class js/ReactBootstrap.ModalFooter))
+(def ModalHeader (reagent/adapt-react-class js/ReactBootstrap.ModalHeader))
+(def ModalTitle (reagent/adapt-react-class js/ReactBootstrap.ModalTitle))
+(def ModalTrigger (reagent/adapt-react-class js/ReactBootstrap.ModalTrigger))
+
 
 
 ;;;;----------------------------
 ;;;; Components
 ;;;;----------------------------
 
+
+(defn modal-confirm []
+  (let [modal-info (subscribe [:ui-state :modal-info])
+        ;; On the next one, we can't use not-empty because (= nil (not-empty nil)), and :show expects true/false,
+        ;; not a truth-ish value.
+        show?      (reaction (not (empty? @modal-info)))]
+    (fn []
+      [Modal {:show @show? :onHide #(dispatch [:modal-info-set nil])}
+       [ModalHeader
+        [:h4 (:header @modal-info)]]
+       [ModalBody
+        [:div
+         (:body @modal-info)]]
+       [ModalFooter
+        [:button {:type     "reset"
+                  :class    "btn btn-default"
+                  :on-click #(dispatch [:modal-info-set nil])} "Cancel"]
+        [:button {:type     "submit"
+                  :class    "btn btn-primary"
+                  :on-click (:action @modal-info)} (:action-label @modal-info)]
+        ]])))
 
 (defn list-tabs [tabs]
   (for [tab (sort-by :index tabs)]
@@ -133,6 +200,7 @@
   (let [tabs (reaction (filter-tabs @(subscribe [:data :tabs])))]
     (fn []
       [:div
+       [modal-confirm]
        [:div {:class "page-header"} [:h2 "Current tabs"]]
        [:table {:class "table table-striped table-hover"}
         [:thead
@@ -155,8 +223,9 @@
     ^{:key (:date group)}
     [:div
      [:div
-      [:h3 (:date group)]
-      [:small [:a {:on-click #(console/log "Deleting" group)} "Delete"]]
+      [:h3 {:on-click #(dispatch [:group-edit-set group])} (or (:date group) (:name group))]
+      [:input {:type "text" :class "form-control" :on-blur #(console/log "Blurring" group)}]
+      [:small [:a {:on-click #(dispatch [:group-delete-set group])} "Delete"]]
       ]
 
      [:table {:class "table table-striped table-hover"}
