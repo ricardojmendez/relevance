@@ -19,8 +19,8 @@
   [db path]
   (reaction (get-in @db path)))
 
-(register-sub :tabs general-query)
-(register-sub :groups general-query)
+(register-sub :data general-query)
+(register-sub :state general-query)
 
 
 ;;;;----------------------------
@@ -48,22 +48,22 @@
   :initialize
   (fn [_ [_ tabs]]
     (.log js/console tabs)
-    (console/trace "Initialized" tabs)
+    (console/trace "Initializing with:" tabs)
     (go (dispatch [:storage-loaded (<! (storage/get))]))
-    {:tabs tabs}))
+    {:data {:tabs tabs}}))
 
 (register-handler
   :storage-loaded
   (fn [app-state [_ data]]
     (console/trace "Storage loaded:" data)
-    (assoc app-state :groups (:groups data))
+    (assoc-in app-state [:data :groups] (:groups data))
     ))
 
 (register-handler
   :tab-created
   (fn [app-state [_ msg]]
     (console/trace "Created" (:tab msg))
-    (assoc app-state :tabs (conj (:tabs app-state) (:tab msg)))))
+    (assoc app-state [:data :tabs] (conj (get-in app-state [:data :tabs]) (:tab msg)))))
 
 (defn remove-tab
   "Removed a tab from a collection by id"
@@ -81,9 +81,9 @@
   :tab-updated
   (fn [app-state [_ msg]]
     (console/trace "Updated:" msg)
-    (assoc app-state
-      :tabs
-      (-> (:tabs app-state)
+    (assoc-in app-state
+      [:data :tabs]
+      (-> (get-in app-state [:data :tabs])
           (remove-tab (:tabId msg))
           (conj (:tab msg))))
     ))
@@ -93,7 +93,7 @@
   :tab-removed
   (fn [app-state [_ msg]]
     (console/trace "Removed:" (:tabId msg) msg)
-    (assoc app-state :tabs (remove-tab (:tabs app-state) (:tabId msg)))))
+    (assoc-in app-state [:data :tabs] (remove-tab (get-in app-state [:data :tabs]) (:tabId msg)))))
 
 (register-handler
   :tab-replaced
@@ -101,18 +101,18 @@
     (console/trace "Replaced:" msg)
     ; We don't need to create a new item for the tab being added, as
     ; we'll also get an "update" message which will add it.
-    (assoc app-state :tabs (remove-tab (:tabs app-state) (:removed msg)))))
+    (assoc-in app-state [:data :tabs] (remove-tab (get-in app-state [:data :tabs]) (:removed msg)))))
 
 
 (register-handler
   :tabset-save
   (fn [app-state [_]]
-    (let [tabs    (:tabs app-state)
+    (let [tabs    (get-in app-state [:data :tabs])
           to-save (map (fn [m] (select-keys m [:index :url :id :title])) tabs)
-          groups  (conj (or (:groups app-state) '())
+          groups  (conj (or (get-in app-state [:data :groups]) '())
                         (group-from-tabs to-save))]
       (storage/set {:groups groups})
-      (assoc app-state :groups groups))
+      (assoc-in app-state [:data :groups] groups))
     ))
 
 
@@ -130,7 +130,7 @@
      [:td (:url tab)]]))
 
 (defn tab-list []
-  (let [tabs (reaction (filter-tabs @(subscribe [:tabs])))]
+  (let [tabs (reaction (filter-tabs @(subscribe [:data :tabs])))]
     (fn []
       [:div
        [:div {:class "page-header"} [:h2 "Current tabs"]]
@@ -154,7 +154,11 @@
   (for [group groups]
     ^{:key (:date group)}
     [:div
-     [:h3 (:date group)]
+     [:div
+      [:h3 (:date group)]
+      [:small [:a {:on-click #(console/log "Deleting" group)} "Delete"]]
+      ]
+
      [:table {:class "table table-striped table-hover"}
       [:thead
        [:tr
@@ -166,7 +170,7 @@
       ]]))
 
 (defn tab-groups []
-  (let [tab-groups (subscribe [:groups])]
+  (let [tab-groups (subscribe [:data :groups])]
     (fn []
       [:div
        [:div {:class "page-header"} [:h2 "Previous groups"]]
