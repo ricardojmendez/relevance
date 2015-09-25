@@ -11,8 +11,13 @@
   (console/log "booklet.handler.init")
   (let [conns (browser/on-clicked)]
     (go (while true
-          (let [tab (<! conns)]
-            (console/log "On click handler. Tab: " tab)
-            ; TODO: Open only if we don't have one on the current window
-            (tabs/create {:url (str (ext/get-url "/" ) "index.html")}))
-          ))))
+          (let [tab     (<! conns)
+                ext-url (str (ext/get-url "/") "index.html")
+                ;; We could just get the window-id from the tab, but that still
+                ;; requires us to make an extra call for the other tabs
+                window  (<! (windows/get-current))
+                our-tab (first (filter #(= ext-url (:url %)) (:tabs window)))]
+            (if our-tab
+              (tabs/activate (:id our-tab))
+              (tabs/create {:url ext-url}))
+          )))))

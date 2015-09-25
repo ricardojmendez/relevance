@@ -226,7 +226,7 @@
           favicon (:favIconUrl tab)
           action  (if is-history?
                     {:href url :target "_blank"}
-                    {:on-click #(tabs/update (:id tab) {:highlighted true :active true})}
+                    {:on-click #(tabs/activate (:id tab))}
                     )]
       ^{:key (:id tab)}
       [:tr
@@ -258,7 +258,7 @@
        [:button {:on-click #(dispatch [:tabset-save])} "Save me"]
        [:button {:on-click #(go (console/log (<! (storage/get))))} "Get"]
        [:button {:on-click #(go (console/log "Usage: " (<! (storage/bytes-in-use))))} "Usage"]
-       [:button {:on-click #(storage/clear)} "Clear"]
+       ; [:button {:on-click #(storage/clear)} "Clear"]
        ])))
 
 
