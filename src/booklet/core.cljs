@@ -55,6 +55,12 @@
   (with-meta identity
              {:component-did-mount #(.focus (reagent/dom-node %))}))
 
+(defn remove-tab
+  "Removed a tab from a collection by id"
+  [col id]
+  (remove #(= (:id %) id) col))
+
+
 
 ;;;;----------------------------
 ;;;; Handlers
@@ -63,8 +69,6 @@
 (register-handler
   :initialize
   (fn [_ [_ tabs]]
-    (.log js/console tabs)
-    (console/trace "Initializing with:" tabs)
     (go (dispatch [:storage-loaded (<! (storage/get))]))
     {:data {:tabs tabs}}))
 
@@ -124,7 +128,6 @@
 (register-handler
   :storage-loaded
   (fn [app-state [_ data]]
-    (console/trace "Storage loaded:" data)
     (assoc-in app-state [:data :groups] (:groups data))
     ))
 
@@ -134,10 +137,6 @@
     (console/trace "Created" (:tab msg))
     (assoc app-state [:data :tabs] (conj (get-in app-state [:data :tabs]) (:tab msg)))))
 
-(defn remove-tab
-  "Removed a tab from a collection by id"
-  [col id]
-  (remove #(= (:id %) id) col))
 
 (register-handler
   :log-content
@@ -221,15 +220,27 @@
                   :on-click (:action @modal-info)} (:action-label @modal-info)]
         ]])))
 
-(defn list-tabs [tabs]
+(defn list-tabs [tabs is-history?]
   (for [tab (sort-by :index tabs)]
-    ^{:key (:id tab)}
-    [:tr
-     [:td (:id tab)]
-     [:td (:title tab)]
-     [:td (:url tab)]]))
+    (let [url     (:url tab)
+          favicon (:favIconUrl tab)
+          action  (if is-history?
+                    {:href url :target "_blank"}
+                    {:on-click #(tabs/update (:id tab) {:highlighted true :active true})}
+                    )]
+      ^{:key (:id tab)}
+      [:tr
+       [:td {:class "col-sm-1"} (if-not is-history? (:id tab))]
+       [:td {:class "col-sm-6"} [:a
+                                 action
+                                 (if favicon
+                                   [:img {:src    favicon
+                                          :width  16
+                                          :height 16}])
+                                 (:title tab)]]
+       [:td {:class "col-sm-5"} url]])))
 
-(defn tab-list []
+(defn current-tabs []
   (let [tabs (reaction (filter-tabs @(subscribe [:data :tabs])))]
     (fn []
       [:div
@@ -242,7 +253,7 @@
           [:th "Title"]
           [:th "URL"]]]
         [:tbody
-         (list-tabs @tabs)]
+         (list-tabs @tabs false)]
         ]
        [:button {:on-click #(dispatch [:tabset-save])} "Save me"]
        [:button {:on-click #(go (console/log (<! (storage/get))))} "Get"]
@@ -286,7 +297,7 @@
                [:th "Title"]
                [:th "URL"]]]
              [:tbody
-              (list-tabs (filter-tabs (:tabs group)))]
+              (list-tabs (filter-tabs (:tabs group)) true)]
              ]]))
        ]
       )
@@ -309,7 +320,7 @@
 
 
 (defn mount-components []
-  (reagent/render-component [tab-list] (.getElementById js/document "tab-list"))
+  (reagent/render-component [current-tabs] (.getElementById js/document "tab-list"))
   (reagent/render-component [tab-groups] (.getElementById js/document "tab-groups")))
 
 
