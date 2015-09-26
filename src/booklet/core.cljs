@@ -1,18 +1,16 @@
 (ns booklet.core
   (:require [cljs.core.async :refer [>! <!]]
             [cljsjs.react-bootstrap]
-            [khroma.runtime :as runtime]
+            [khroma.idle :as idle]
             [khroma.log :as console]
+            [khroma.runtime :as runtime]
             [khroma.storage :as storage]
             [khroma.tabs :as tabs]
+            [khroma.windows :as windows]
             [reagent.core :as reagent]
-            [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
-            [khroma.windows :as windows])
+            [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]])
   (:require-macros [cljs.core.async.macros :refer [go]]
                    [reagent.ratom :refer [reaction]]))
-
-
-
 
 
 ;;;;------------------------------
@@ -35,7 +33,6 @@
 (defn dispatch-on-press-enter [e d]
   (if (= 13 (.-which e))
     (dispatch d)))
-
 
 
 (defn filter-tabs
@@ -82,7 +79,13 @@
           (assoc :data (merge current new-data))
           (assoc-in [:ui-state :section] :groups)
           (assoc-in [:app-state :import] nil))
-      )
+      )))
+
+(register-handler
+  :data-set
+  (fn [app-state [_ key item]]
+    (storage/set {key item})
+    (assoc-in app-state [:data key] item)
     ))
 
 
@@ -92,6 +95,16 @@
     (go (dispatch [:storage-loaded (<! (storage/get))]))
     {:data     {:tabs tabs}
      :ui-state {:section :monitor}}))
+
+(register-handler
+  :group-add
+  (fn [app-state [_]]
+    (let [tabs    (get-in app-state [:data :tabs])
+          to-save (map (fn [m] (select-keys m [:index :url :id :title :favIconUrl])) tabs)
+          groups  (conj (or (get-in app-state [:data :groups]) '())
+                        (group-from-tabs to-save))]
+      (dispatch [:data-set :groups groups])
+      app-state)))
 
 (register-handler
   :group-delete-set
@@ -109,7 +122,7 @@
   (fn [app-state [_ group]]
     (let [original (get-in app-state [:data :groups])
           groups   (remove #(= group %) original)]
-      (dispatch [:groups-set groups])
+      (dispatch [:data-set :groups groups])
       app-state)))
 
 
@@ -128,35 +141,28 @@
 (register-handler
   :group-update
   (fn [app-state [_ old-group new-group]]
-    (dispatch [:groups-set (->> (get-in app-state [:data :groups])
-                                (remove #(= % old-group))
-                                (cons new-group))])
+    (dispatch [:data-set :groups (->> (get-in app-state [:data :groups])
+                                      (remove #(= % old-group))
+                                      (cons new-group))])
     app-state))
 
 
 (register-handler
-  :groups-set
-  (fn [app-state [_ groups]]
-    (storage/set {:groups groups})
-    (assoc-in app-state [:data :groups] groups)
-    ))
-
-(register-handler
-  :modal-info-set
-  (fn [app-state [_ info]]
-    (assoc-in app-state [:ui-state :modal-info] info)))
-
-(register-handler
-  :storage-loaded
-  (fn [app-state [_ data]]
-    (assoc-in app-state [:data :groups] (:groups data))
-    ))
-
-(register-handler
-  :tab-created
-  (fn [app-state [_ msg]]
-    (console/trace "Created" (:tab msg))
-    (assoc app-state [:data :tabs] (conj (get-in app-state [:data :tabs]) (:tab msg)))))
+  :idle-state-change
+  (fn [app-state [_ message]]
+    (let [path    [:app-state :interval]
+          handler (get-in app-state path)
+          state   (:newState message)]
+      (console/log "Idle state change:" state handler)
+      (cond
+        (and (nil? handler)
+             (= state "active")) (assoc-in app-state path (js/setInterval #(dispatch [:snapshot-take]) 60000))
+        (and (some? handler)
+             (not= state "active")) (do
+                                      (js/clearInterval handler)
+                                      (assoc-in app-state path nil))
+        :else app-state
+        ))))
 
 
 (register-handler
@@ -165,6 +171,41 @@
     (console/log "Log event:" content)
     app-state
     ))
+
+
+(register-handler
+  :modal-info-set
+  (fn [app-state [_ info]]
+    (assoc-in app-state [:ui-state :modal-info] info)))
+
+
+(register-handler
+  :snapshot-take
+  (fn [app-state [_]]
+    (let [path      [:data :snapshots]
+          current   (or (get-in app-state path) '())
+          tabs      (get-in app-state [:data :tabs])
+          new-group (group-from-tabs (map #(select-keys % [:index :url :id :title :favIconUrl]) tabs))
+          snapshots (conj current new-group)
+          ]
+      (console/log "Tick tock snapshot" (.now js/Date) (count snapshots) snapshots)
+      (dispatch [:data-set :snapshots snapshots]))
+    app-state
+    ))
+
+
+(register-handler
+  :storage-loaded
+  (fn [app-state [_ data]]
+    (assoc app-state :data (merge (:data app-state) data))
+    ))
+
+
+(register-handler
+  :tab-created
+  (fn [app-state [_ msg]]
+    (console/trace "Created" (:tab msg))
+    (assoc app-state [:data :tabs] (conj (get-in app-state [:data :tabs]) (:tab msg)))))
 
 
 (register-handler
@@ -193,15 +234,6 @@
     (assoc-in app-state [:data :tabs] (remove-tab (get-in app-state [:data :tabs]) (:removed msg)))))
 
 
-(register-handler
-  :tabset-save
-  (fn [app-state [_]]
-    (let [tabs    (get-in app-state [:data :tabs])
-          to-save (map (fn [m] (select-keys m [:index :url :id :title])) tabs)
-          groups  (conj (or (get-in app-state [:data :groups]) '())
-                        (group-from-tabs to-save))]
-      (dispatch [:groups-set groups])
-      app-state)))
 
 ;;;;------------------------------
 ;;;; Utils
@@ -211,8 +243,6 @@
 (def ModalBody (reagent/adapt-react-class js/ReactBootstrap.ModalBody))
 (def ModalFooter (reagent/adapt-react-class js/ReactBootstrap.ModalFooter))
 (def ModalHeader (reagent/adapt-react-class js/ReactBootstrap.ModalHeader))
-(def ModalTitle (reagent/adapt-react-class js/ReactBootstrap.ModalTitle))
-(def ModalTrigger (reagent/adapt-react-class js/ReactBootstrap.ModalTrigger))
 
 
 
@@ -309,7 +339,7 @@
          (list-tabs @tabs false)]
         ]
        [:a {:class    "btn btn-primary btn-sm"
-            :on-click #(dispatch [:tabset-save])} "Save me"]
+            :on-click #(dispatch [:group-add])} "Save me"]
        [:a {:class    "btn btn-primary btn-sm"
             :on-click #(go (console/log (<! (storage/get))))} "Get"]
        [:a {:class    "btn btn-primary btn-sm"
@@ -429,14 +459,18 @@
 
 (defn init []
   (console/log "Initialized booklet.core")
-  (go (let [c (<! (windows/get-current))]
-        (dispatch [:initialize (:tabs c)])))
+  (go (let [window (<! (windows/get-current))
+            state  (<! (idle/query-state 30))]
+        (dispatch-sync [:initialize (:tabs window)])
+        (dispatch-sync [:idle-state-change {:newState state}])))
   (let [bg (runtime/connect)]
     (dispatch-on-channel :log-content storage/on-changed)
     (dispatch-on-channel :tab-created tabs/on-created)
     (dispatch-on-channel :tab-removed tabs/on-removed)
     (dispatch-on-channel :tab-updated tabs/on-updated)
     (dispatch-on-channel :tab-replaced tabs/on-replaced)
+    (idle/set-detection-interval 60)
+    (dispatch-on-channel :idle-state-change idle/on-state-changed)
     (go (>! bg :lol-i-am-a-popup)
         (console/log "Background said: " (<! bg))))
   (mount-components))
