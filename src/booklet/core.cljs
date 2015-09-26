@@ -347,6 +347,38 @@
        ; [:button {:on-click #(storage/clear)} "Clear"]
        ])))
 
+(defn list-groups
+  [group-list editable? group-edit edit-label]
+  (for [group group-list]
+    ^{:key (:date group)}
+    [:div
+     [:div
+      (if (= group group-edit)
+        [initial-focus-wrapper
+         [:input {:type      "text"
+                  :class     "form-control"
+                  :value     edit-label
+                  :on-change #(dispatch-sync [:group-label-set (-> % .-target .-value)])
+                  :on-blur   #(do
+                               (dispatch [:group-update group (assoc group :name edit-label)])
+                               (dispatch [:group-edit-set nil]))
+                  }]]
+        [:h3 {:on-click #(dispatch [:group-edit-set group])} (group-label group)]
+        )
+      (if editable? [:small [:a {:on-click #(dispatch [:group-delete-set group])} "Delete"]])
+      ]
+
+     [:table {:class "table table-striped table-hover"}
+      [:thead
+       [:tr
+        [:th "#"]
+        [:th "Title"]
+        [:th "URL"]]]
+      [:tbody
+       (list-tabs (filter-tabs (:tabs group)) true)]
+      ]])
+  )
+
 (defn tab-groups []
   (let [tab-groups (subscribe [:data :groups])
         group-edit (subscribe [:ui-state :group-edit])
@@ -356,37 +388,18 @@
       [:div
        [modal-confirm]
        [:div {:class "page-header"} [:h2 "Previous groups"]]
-       (doall
-         (for [group @to-list]
-           ^{:key (:date group)}
-           [:div
-            [:div
-             (if (= group @group-edit)
-               [initial-focus-wrapper
-                [:input {:type      "text"
-                         :class     "form-control"
-                         :value     @label
-                         :on-change #(dispatch-sync [:group-label-set (-> % .-target .-value)])
-                         :on-blur   #(do
-                                      (dispatch [:group-update group (assoc group :name @label)])
-                                      (dispatch [:group-edit-set nil]))
-                         }]]
-               [:h3 {:on-click #(dispatch [:group-edit-set group])} (group-label group)]
-               )
-             [:small [:a {:on-click #(dispatch [:group-delete-set group])} "Delete"]]
-             ]
+       (list-groups @to-list true @group-edit @label)
+       ])
+    ))
 
-            [:table {:class "table table-striped table-hover"}
-             [:thead
-              [:tr
-               [:th "#"]
-               [:th "Title"]
-               [:th "URL"]]]
-             [:tbody
-              (list-tabs (filter-tabs (:tabs group)) true)]
-             ]]))
-       ]
-      )
+(defn snapshots []
+  (let [snapshots (subscribe [:data :snapshots])
+        to-list   (reaction (sort-by #(* -1 (:date %)) @snapshots))]
+    (fn []
+      [:div
+       [:div {:class "page-header"} [:h2 "Snapshots"]]
+       (list-groups @to-list false nil nil)
+       ])
     ))
 
 
@@ -423,10 +436,11 @@
        ])))
 
 
-(def component-dir {:monitor current-tabs
-                    :groups  tab-groups
-                    :export  data-export
-                    :import  data-import})
+(def component-dir {:monitor   current-tabs
+                    :groups    tab-groups
+                    :export    data-export
+                    :import    data-import
+                    :snapshots snapshots})
 
 
 (defn main-section []
