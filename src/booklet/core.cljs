@@ -184,12 +184,13 @@
   (fn [app-state [_]]
     (let [path      [:data :snapshots]
           current   (or (get-in app-state path) '())
-          tabs      (get-in app-state [:data :tabs])
+          tabs      (filter-tabs (get-in app-state [:data :tabs]))
           new-group (group-from-tabs (map #(select-keys % [:index :url :id :title :favIconUrl]) tabs))
           snapshots (conj current new-group)
           ]
-      (console/log "Tick tock snapshot" (.now js/Date) (count snapshots) snapshots)
-      (dispatch [:data-set :snapshots snapshots]))
+      (when (< 0 (count tabs)) (dispatch [:data-set :snapshots snapshots]))
+      ; (console/log "Tick tock snapshot" (.now js/Date) (count snapshots) snapshots)
+      )
     app-state
     ))
 
