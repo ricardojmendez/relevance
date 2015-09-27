@@ -25,6 +25,7 @@
 
 (register-sub :data general-query)
 (register-sub :ui-state general-query)
+(register-sub :app-state general-query)
 
 
 ;;;;----------------------------
@@ -65,6 +66,25 @@
 ;;;;----------------------------
 ;;;; Handlers
 ;;;;----------------------------
+
+(register-handler
+  :app-state-item
+  (fn [app-state [_ path item]]
+    (assoc-in app-state path item)))
+
+
+(register-handler
+  :data-import
+  (fn [app-state [_ json-data]]
+    (let [current  (:data app-state)
+          new-data (clojure.walk/keywordize-keys (js->clj (.parse js/JSON json-data)))]
+      (-> app-state
+          (assoc :data (merge current new-data))
+          (assoc-in [:ui-state :section] :groups)
+          (assoc-in [:app-state :import] nil))
+      )
+    ))
+
 
 (register-handler
   :initialize
@@ -148,11 +168,6 @@
 
 
 (register-handler
-  :set-app-state-item
-  (fn [app-state [_ path item]]
-    (assoc-in app-state path item)))
-
-(register-handler
   :tab-updated
   (fn [app-state [_ msg]]
     (console/trace "Updated:" msg)
@@ -208,7 +223,7 @@
 
 (defn navbar-item [label section current]
   [:li {:class (when (= section current) "active")}
-   [:a {:on-click #(dispatch [:set-app-state-item [:ui-state :section] section])} label
+   [:a {:on-click #(dispatch [:app-state-item [:ui-state :section] section])} label
     (when (= section current) [:span {:class "sr-only"} "(current)"])]]
   )
 
@@ -293,9 +308,12 @@
         [:tbody
          (list-tabs @tabs false)]
         ]
-       [:button {:on-click #(dispatch [:tabset-save])} "Save me"]
-       [:button {:on-click #(go (console/log (<! (storage/get))))} "Get"]
-       [:button {:on-click #(go (console/log "Usage: " (<! (storage/bytes-in-use))))} "Usage"]
+       [:a {:class    "btn btn-primary btn-sm"
+            :on-click #(dispatch [:tabset-save])} "Save me"]
+       [:a {:class    "btn btn-primary btn-sm"
+            :on-click #(go (console/log (<! (storage/get))))} "Get"]
+       [:a {:class    "btn btn-primary btn-sm"
+            :on-click #(go (console/log "Usage: " (<! (storage/bytes-in-use))))} "Usage"]
        ; [:button {:on-click #(storage/clear)} "Clear"]
        ])))
 
@@ -341,6 +359,7 @@
       )
     ))
 
+
 (defn data-export []
   (let [data      (subscribe [:data])
         as-string (reaction (.stringify js/JSON (clj->js (dissoc @data :tabs)) nil 2))]
@@ -356,10 +375,28 @@
         ]
        ])))
 
+(defn data-import []
+  (let [path        [:app-state :import]
+        import-data (subscribe path)]
+    (fn []
+      [:div
+       [:div {:class "page-header"} [:h2 "Import data"]]
+       [:div {:class "alert alert-warning"}
+        [:h4 "Warning!"]
+        [:p "Any data item for which there is a key on the JSON below be replaced!"]]
+       [:textarea {:class     "form-control"
+                   :rows      30
+                   :value     @import-data
+                   :on-change #(dispatch [:app-state-item path (-> % .-target .-value)])}]
+       [:a {:class    "btn btn-danger btn-sm"
+            :on-click #(dispatch [:data-import @import-data])} "Import"]
+       ])))
+
 
 (def component-dir {:monitor current-tabs
                     :groups  tab-groups
-                    :export  data-export})
+                    :export  data-export
+                    :import  data-import})
 
 
 (defn main-section []
