@@ -70,7 +70,8 @@
   :initialize
   (fn [_ [_ tabs]]
     (go (dispatch [:storage-loaded (<! (storage/get))]))
-    {:data {:tabs tabs}}))
+    {:data     {:tabs tabs}
+     :ui-state {:section :monitor}}))
 
 (register-handler
   :group-delete-set
@@ -145,6 +146,12 @@
     app-state
     ))
 
+
+(register-handler
+  :set-app-state-item
+  (fn [app-state [_ path item]]
+    (assoc-in app-state path item)))
+
 (register-handler
   :tab-updated
   (fn [app-state [_ msg]]
@@ -197,6 +204,38 @@
 ;;;;----------------------------
 ;;;; Components
 ;;;;----------------------------
+
+
+(defn navbar-item [label section current]
+  [:li {:class (when (= section current) "active")}
+   [:a {:on-click #(dispatch [:set-app-state-item [:ui-state :section] section])} label
+    (when (= section current) [:span {:class "sr-only"} "(current)"])]]
+  )
+
+(defn navbar []
+  (let [section (subscribe [:ui-state :section])]
+    (fn []
+      [:nav {:class "navbar navbar-default"}
+       [:div {:class "container-fluid"}
+        [:div {:class "navbar-header"}
+         [:button {:type "button", :class "navbar-toggle collapsed", :data-toggle "collapse", :data-target "#bs-example-navbar-collapse-1"}
+          [:span {:class "sr-only"} "Toggle navigation"]
+          [:span {:class "icon-bar"}]
+          [:span {:class "icon-bar"}]
+          [:span {:class "icon-bar"}]]
+         [:a {:class "navbar-brand", :href "#"} "Brand"]]
+        [:div {:class "collapse navbar-collapse", :id "bs-example-navbar-collapse-1"}
+         [:ul {:class "nav navbar-nav"}
+          [navbar-item "Monitor" :monitor @section]
+          [navbar-item "Groups" :groups @section]
+          [navbar-item "Snapshots" :snapshots @section]]
+         [:form {:class "navbar-form navbar-left", :role "search"}
+          [:div {:class "form-group"}
+           [:input {:type "text", :class "form-control", :placeholder "Search"}]]
+          [:button {:type "submit", :class "btn btn-default"} "Submit"]]
+         [:ul {:class "nav navbar-nav navbar-right"}
+          [navbar-item "Export" :export @section]
+          [navbar-item "Import" :import @section]]]]])))
 
 
 (defn modal-confirm []
@@ -261,7 +300,6 @@
        ; [:button {:on-click #(storage/clear)} "Clear"]
        ])))
 
-
 (defn tab-groups []
   (let [tab-groups (subscribe [:data :groups])
         group-edit (subscribe [:ui-state :group-edit])
@@ -304,6 +342,18 @@
     ))
 
 
+(def component-dir {:monitor current-tabs
+                    :groups  tab-groups})
+
+
+(defn main-section []
+  (let [section   (subscribe [:ui-state :section])
+        component (reaction (get component-dir @section))]
+    (fn []
+      (if (some? @component)
+        [@component]
+        [:div "Work in progress..."]))))
+
 ;;;;----------------------------
 ;;;; Chrome subscriptions
 ;;;;----------------------------
@@ -320,8 +370,8 @@
 
 
 (defn mount-components []
-  (reagent/render-component [current-tabs] (.getElementById js/document "tab-list"))
-  (reagent/render-component [tab-groups] (.getElementById js/document "tab-groups")))
+  (reagent/render-component [navbar] (.getElementById js/document "navbar"))
+  (reagent/render-component [main-section] (.getElementById js/document "main-section")))
 
 
 (defn init []
