@@ -283,7 +283,6 @@
   (let [tabs (reaction (filter-tabs @(subscribe [:data :tabs])))]
     (fn []
       [:div
-       [modal-confirm]
        [:div {:class "page-header"} [:h2 "Current tabs"]]
        [:table {:class "table table-striped table-hover"}
         [:thead
@@ -307,6 +306,7 @@
         to-list    (reaction (sort-by #(* -1 (:date %)) @tab-groups))]
     (fn []
       [:div
+       [modal-confirm]
        [:div {:class "page-header"} [:h2 "Previous groups"]]
        (doall
          (for [group @to-list]
@@ -341,9 +341,25 @@
       )
     ))
 
+(defn data-export []
+  (let [data      (subscribe [:data])
+        as-string (reaction (.stringify js/JSON (clj->js (dissoc @data :tabs)) nil 2))]
+    (fn []
+      [:div
+       [:div {:class "page-header"} [:h2 "Current data"]]
+       [:p (str "Copy the JSON below to a safe location. Size: " (count @as-string))]
+       [:textarea {:class     "form-control"
+                   :rows      30
+                   :read-only true
+                   ;; We will not export the current tab list
+                   :value     @as-string}
+        ]
+       ])))
+
 
 (def component-dir {:monitor current-tabs
-                    :groups  tab-groups})
+                    :groups  tab-groups
+                    :export  data-export})
 
 
 (defn main-section []
