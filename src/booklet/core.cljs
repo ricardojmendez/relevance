@@ -25,6 +25,7 @@
 
 (register-sub :data general-query)
 (register-sub :ui-state general-query)
+(register-sub :app-state general-query)
 
 
 ;;;;----------------------------
@@ -67,10 +68,30 @@
 ;;;;----------------------------
 
 (register-handler
+  :app-state-item
+  (fn [app-state [_ path item]]
+    (assoc-in app-state path item)))
+
+
+(register-handler
+  :data-import
+  (fn [app-state [_ json-data]]
+    (let [current  (:data app-state)
+          new-data (clojure.walk/keywordize-keys (js->clj (.parse js/JSON json-data)))]
+      (-> app-state
+          (assoc :data (merge current new-data))
+          (assoc-in [:ui-state :section] :groups)
+          (assoc-in [:app-state :import] nil))
+      )
+    ))
+
+
+(register-handler
   :initialize
   (fn [_ [_ tabs]]
     (go (dispatch [:storage-loaded (<! (storage/get))]))
-    {:data {:tabs tabs}}))
+    {:data     {:tabs tabs}
+     :ui-state {:section :monitor}}))
 
 (register-handler
   :group-delete-set
@@ -145,6 +166,7 @@
     app-state
     ))
 
+
 (register-handler
   :tab-updated
   (fn [app-state [_ msg]]
@@ -199,6 +221,38 @@
 ;;;;----------------------------
 
 
+(defn navbar-item [label section current]
+  [:li {:class (when (= section current) "active")}
+   [:a {:on-click #(dispatch [:app-state-item [:ui-state :section] section])} label
+    (when (= section current) [:span {:class "sr-only"} "(current)"])]]
+  )
+
+(defn navbar []
+  (let [section (subscribe [:ui-state :section])]
+    (fn []
+      [:nav {:class "navbar navbar-default"}
+       [:div {:class "container-fluid"}
+        [:div {:class "navbar-header"}
+         [:button {:type "button", :class "navbar-toggle collapsed", :data-toggle "collapse", :data-target "#bs-example-navbar-collapse-1"}
+          [:span {:class "sr-only"} "Toggle navigation"]
+          [:span {:class "icon-bar"}]
+          [:span {:class "icon-bar"}]
+          [:span {:class "icon-bar"}]]
+         [:a {:class "navbar-brand", :href "#"} "Brand"]]
+        [:div {:class "collapse navbar-collapse", :id "bs-example-navbar-collapse-1"}
+         [:ul {:class "nav navbar-nav"}
+          [navbar-item "Monitor" :monitor @section]
+          [navbar-item "Groups" :groups @section]
+          [navbar-item "Snapshots" :snapshots @section]]
+         [:form {:class "navbar-form navbar-left", :role "search"}
+          [:div {:class "form-group"}
+           [:input {:type "text", :class "form-control", :placeholder "Search"}]]
+          [:button {:type "submit", :class "btn btn-default"} "Submit"]]
+         [:ul {:class "nav navbar-nav navbar-right"}
+          [navbar-item "Export" :export @section]
+          [navbar-item "Import" :import @section]]]]])))
+
+
 (defn modal-confirm []
   (let [modal-info (subscribe [:ui-state :modal-info])
         ;; On the next one, we can't use not-empty because (= nil (not-empty nil)), and :show expects true/false,
@@ -244,7 +298,6 @@
   (let [tabs (reaction (filter-tabs @(subscribe [:data :tabs])))]
     (fn []
       [:div
-       [modal-confirm]
        [:div {:class "page-header"} [:h2 "Current tabs"]]
        [:table {:class "table table-striped table-hover"}
         [:thead
@@ -255,12 +308,14 @@
         [:tbody
          (list-tabs @tabs false)]
         ]
-       [:button {:on-click #(dispatch [:tabset-save])} "Save me"]
-       [:button {:on-click #(go (console/log (<! (storage/get))))} "Get"]
-       [:button {:on-click #(go (console/log "Usage: " (<! (storage/bytes-in-use))))} "Usage"]
+       [:a {:class    "btn btn-primary btn-sm"
+            :on-click #(dispatch [:tabset-save])} "Save me"]
+       [:a {:class    "btn btn-primary btn-sm"
+            :on-click #(go (console/log (<! (storage/get))))} "Get"]
+       [:a {:class    "btn btn-primary btn-sm"
+            :on-click #(go (console/log "Usage: " (<! (storage/bytes-in-use))))} "Usage"]
        ; [:button {:on-click #(storage/clear)} "Clear"]
        ])))
-
 
 (defn tab-groups []
   (let [tab-groups (subscribe [:data :groups])
@@ -269,6 +324,7 @@
         to-list    (reaction (sort-by #(* -1 (:date %)) @tab-groups))]
     (fn []
       [:div
+       [modal-confirm]
        [:div {:class "page-header"} [:h2 "Previous groups"]]
        (doall
          (for [group @to-list]
@@ -304,6 +360,53 @@
     ))
 
 
+(defn data-export []
+  (let [data      (subscribe [:data])
+        as-string (reaction (.stringify js/JSON (clj->js (dissoc @data :tabs)) nil 2))]
+    (fn []
+      [:div
+       [:div {:class "page-header"} [:h2 "Current data"]]
+       [:p (str "Copy the JSON below to a safe location. Size: " (count @as-string))]
+       [:textarea {:class     "form-control"
+                   :rows      30
+                   :read-only true
+                   ;; We will not export the current tab list
+                   :value     @as-string}
+        ]
+       ])))
+
+(defn data-import []
+  (let [path        [:app-state :import]
+        import-data (subscribe path)]
+    (fn []
+      [:div
+       [:div {:class "page-header"} [:h2 "Import data"]]
+       [:div {:class "alert alert-warning"}
+        [:h4 "Warning!"]
+        [:p "Any data item for which there is a key on the JSON below be replaced!"]]
+       [:textarea {:class     "form-control"
+                   :rows      30
+                   :value     @import-data
+                   :on-change #(dispatch [:app-state-item path (-> % .-target .-value)])}]
+       [:a {:class    "btn btn-danger btn-sm"
+            :on-click #(dispatch [:data-import @import-data])} "Import"]
+       ])))
+
+
+(def component-dir {:monitor current-tabs
+                    :groups  tab-groups
+                    :export  data-export
+                    :import  data-import})
+
+
+(defn main-section []
+  (let [section   (subscribe [:ui-state :section])
+        component (reaction (get component-dir @section))]
+    (fn []
+      (if (some? @component)
+        [@component]
+        [:div "Work in progress..."]))))
+
 ;;;;----------------------------
 ;;;; Chrome subscriptions
 ;;;;----------------------------
@@ -320,8 +423,8 @@
 
 
 (defn mount-components []
-  (reagent/render-component [current-tabs] (.getElementById js/document "tab-list"))
-  (reagent/render-component [tab-groups] (.getElementById js/document "tab-groups")))
+  (reagent/render-component [navbar] (.getElementById js/document "navbar"))
+  (reagent/render-component [main-section] (.getElementById js/document "main-section")))
 
 
 (defn init []
