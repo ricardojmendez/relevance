@@ -185,15 +185,25 @@
   :snapshot-take
   (fn [app-state [_]]
     (let [path      [:data :snapshots]
-          current   (or (get-in app-state path) '())
-          tabs      (filter-tabs (get-in app-state [:app-state :tabs]))
-          new-group (group-from-tabs (map #(select-keys % [:index :url :id :title :favIconUrl]) tabs))
-          snapshots (conj current new-group)
+          snapshots (or (get-in app-state path) '())
+          tabs      (->> (get-in app-state [:app-state :tabs])
+                         filter-tabs
+                         (map #(select-keys % [:index :url :id :title :favIconUrl])))
+          new-group (group-from-tabs tabs)
+          last-snap (or (get-in app-state [:app-state :last-snapshot])
+                        (first (sort-by #(* -1 (:date %)) snapshots)))
+          is-last?  (= (set (map :url tabs))
+                       (set (map :url (:tabs last-snap))))
+          save?     (and (< 0 (count tabs))
+                         (not is-last?))
           ]
-      (when (< 0 (count tabs)) (dispatch [:data-set :snapshots snapshots]))
-      ; (console/log "Tick tock snapshot" (.now js/Date) (count snapshots) snapshots)
+      (when save? (dispatch [:data-set :snapshots (conj snapshots new-group)]))
+      ; (console/log "Current" (set tabs) "Last" (set (:tabs last-snap)) "Last snap" last-snap)
+      ; (console/log "Tick tock snapshot " save? (.now js/Date))
+      (if save?
+        (assoc-in app-state [:app-state :last-snapshot] new-group)
+        app-state)
       )
-    app-state
     ))
 
 
