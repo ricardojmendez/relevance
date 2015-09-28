@@ -75,10 +75,11 @@
 (register-handler
   :data-import
   (fn [app-state [_ json-data]]
-    (let [current  (:data app-state)
-          new-data (clojure.walk/keywordize-keys (js->clj (.parse js/JSON json-data)))]
+    (let [new-data (clojure.walk/keywordize-keys (js->clj (.parse js/JSON json-data)))]
+      (doseq [[key item] new-data]
+        ;; Dispatch instead of just doing an assoc so that it's also saved
+        (dispatch [:data-set key item]))
       (-> app-state
-          (assoc :data (merge current new-data))
           (assoc-in [:ui-state :section] :groups)
           (assoc-in [:app-state :import] nil))
       )))
