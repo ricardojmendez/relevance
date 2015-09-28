@@ -1,6 +1,6 @@
 (ns booklet.handler
   (:require [khroma.log :as console]
-            [khroma.browser :as browser]
+            [khroma.browser-action :as browser]
             [khroma.tabs :as tabs]
             [khroma.extension :as ext]
             [khroma.windows :as windows]

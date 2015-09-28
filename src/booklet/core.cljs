@@ -21,7 +21,9 @@
   [db path]
   (reaction (get-in @db path)))
 
+;; Application data, will be saved
 (register-sub :data general-query)
+;; Transient data items
 (register-sub :ui-state general-query)
 (register-sub :app-state general-query)
 
@@ -93,13 +95,13 @@
   :initialize
   (fn [_ [_ tabs]]
     (go (dispatch [:storage-loaded (<! (storage/get))]))
-    {:data     {:tabs tabs}
-     :ui-state {:section :monitor}}))
+    {:app-state {:tabs tabs}
+     :ui-state  {:section :monitor}}))
 
 (register-handler
   :group-add
   (fn [app-state [_]]
-    (let [tabs    (get-in app-state [:data :tabs])
+    (let [tabs    (get-in app-state [:app-state :tabs])
           to-save (map (fn [m] (select-keys m [:index :url :id :title :favIconUrl])) tabs)
           groups  (conj (or (get-in app-state [:data :groups]) '())
                         (group-from-tabs to-save))]
@@ -184,7 +186,7 @@
   (fn [app-state [_]]
     (let [path      [:data :snapshots]
           current   (or (get-in app-state path) '())
-          tabs      (filter-tabs (get-in app-state [:data :tabs]))
+          tabs      (filter-tabs (get-in app-state [:app-state :tabs]))
           new-group (group-from-tabs (map #(select-keys % [:index :url :id :title :favIconUrl]) tabs))
           snapshots (conj current new-group)
           ]
@@ -206,7 +208,7 @@
   :tab-created
   (fn [app-state [_ msg]]
     (console/trace "Created" (:tab msg))
-    (assoc app-state [:data :tabs] (conj (get-in app-state [:data :tabs]) (:tab msg)))))
+    (assoc app-state [:app-state :tabs] (conj (get-in app-state [:app-state :tabs]) (:tab msg)))))
 
 
 (register-handler
@@ -214,8 +216,8 @@
   (fn [app-state [_ msg]]
     (console/trace "Updated:" msg)
     (assoc-in app-state
-              [:data :tabs]
-              (-> (get-in app-state [:data :tabs])
+              [:app-state :tabs]
+              (-> (get-in app-state [:app-state :tabs])
                   (remove-tab (:tabId msg))
                   (conj (:tab msg))))
     ))
@@ -224,7 +226,7 @@
   :tab-removed
   (fn [app-state [_ msg]]
     (console/trace "Removed:" (:tabId msg) msg)
-    (assoc-in app-state [:data :tabs] (remove-tab (get-in app-state [:data :tabs]) (:tabId msg)))))
+    (assoc-in app-state [:app-state :tabs] (remove-tab (get-in app-state [:app-state :tabs]) (:tabId msg)))))
 
 (register-handler
   :tab-replaced
@@ -232,7 +234,7 @@
     (console/trace "Replaced:" msg)
     ; We don't need to create a new item for the tab being added, as
     ; we'll also get an "update" message which will add it.
-    (assoc-in app-state [:data :tabs] (remove-tab (get-in app-state [:data :tabs]) (:removed msg)))))
+    (assoc-in app-state [:app-state :tabs] (remove-tab (get-in app-state [:app-state :tabs]) (:removed msg)))))
 
 
 
@@ -269,7 +271,7 @@
           [:span {:class "icon-bar"}]
           [:span {:class "icon-bar"}]
           [:span {:class "icon-bar"}]]
-         [:a {:class "navbar-brand", :href "#"} "Brand"]]
+         [:a {:class "navbar-brand" :href "http://numergent.com" :target "_new"} "Booklet"]]
         [:div {:class "collapse navbar-collapse", :id "bs-example-navbar-collapse-1"}
          [:ul {:class "nav navbar-nav"}
           [navbar-item "Monitor" :monitor @section]
@@ -326,7 +328,7 @@
        [:td {:class "col-sm-5"} url]])))
 
 (defn current-tabs []
-  (let [tabs (reaction (filter-tabs @(subscribe [:data :tabs])))]
+  (let [tabs (reaction (filter-tabs @(subscribe [:app-state :tabs])))]
     (fn []
       [:div
        [:div {:class "page-header"} [:h2 "Current tabs"]]
@@ -406,7 +408,7 @@
 
 (defn data-export []
   (let [data      (subscribe [:data])
-        as-string (reaction (.stringify js/JSON (clj->js (dissoc @data :tabs)) nil 2))]
+        as-string (reaction (.stringify js/JSON (clj->js @data) nil 2))]
     (fn []
       [:div
        [:div {:class "page-header"} [:h2 "Current data"]]
