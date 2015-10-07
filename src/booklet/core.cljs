@@ -61,6 +61,8 @@
   [col id]
   (remove #(= (:id %) id) col))
 
+;; Tab items we actually care about
+(def relevant-tab-items [:index :url :title :favIconUrl])
 
 
 ;;;;----------------------------
@@ -104,7 +106,7 @@
   :group-add
   (fn [app-state [_]]
     (let [tabs    (get-in app-state [:app-state :tabs])
-          to-save (map (fn [m] (select-keys m [:index :url :id :title :favIconUrl])) tabs)
+          to-save (map (fn [m] (select-keys m relevant-tab-items)) tabs)
           groups  (conj (or (get-in app-state [:data :groups]) '())
                         (group-from-tabs to-save))]
       (dispatch [:data-set :groups groups])
@@ -190,7 +192,7 @@
           snapshots (or (get-in app-state path) '())
           tabs      (->> (get-in app-state [:app-state :tabs])
                          filter-tabs
-                         (map #(select-keys % [:index :url :id :title :favIconUrl])))
+                         (map #(select-keys % relevant-tab-items)))
           new-group (group-from-tabs tabs)
           last-snap (or (get-in app-state [:app-state :last-snapshot])
                         (first (sort-by #(* -1 (:date %)) snapshots)))
