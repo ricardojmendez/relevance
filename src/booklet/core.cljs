@@ -1,6 +1,7 @@
 (ns booklet.core
   (:require [cljs.core.async :refer [>! <!]]
             [cljsjs.react-bootstrap]
+            [cljs-uuid-utils.core :as uuid]
             [khroma.idle :as idle]
             [khroma.log :as console]
             [khroma.runtime :as runtime]
@@ -211,7 +212,14 @@
 (register-handler
   :storage-loaded
   (fn [app-state [_ data]]
-    (assoc app-state :data (merge (:data app-state) data))
+    ;; We create a new id if fir any reason we don't have one
+    (when (empty? (:instance-id data))
+      (dispatch [:data-set :instance-id (uuid/uuid-string (uuid/make-random-uuid))]))
+    ;; Return new data state. We don't return the new id because data-set also
+    ;; saves it, the call below only sets the internal state
+    (->> data
+         (merge (:data app-state))
+         (assoc app-state :data))
     ))
 
 
