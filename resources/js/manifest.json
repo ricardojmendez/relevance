@@ -15,7 +15,7 @@
     "128": "icon128.png"
   },
   "permissions": [
-    "tabs", "storage", "idle"
+    "tabs", "storage", "idle", "http://localhost:3000/"
   ],
   "background": {
     "scripts": [
