@@ -1,7 +1,8 @@
 (ns booklet.core
-  (:require [cljs.core.async :refer [>! <!]]
+  (:require [ajax.core :refer [GET POST PUT]]
+            [cljs.core.async :refer [>! <!]]
+            [cljs.core :refer [random-uuid]]
             [cljsjs.react-bootstrap]
-            [cljs-uuid-utils.core :as uuid]
             [khroma.idle :as idle]
             [khroma.log :as console]
             [khroma.runtime :as runtime]
@@ -10,13 +11,16 @@
             [khroma.windows :as windows]
             [reagent.core :as reagent]
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]])
-  (:require-macros [cljs.core.async.macros :refer [go]]
+  (:require-macros [cljs.core :refer [goog-define]]
+                   [cljs.core.async.macros :refer [go]]
                    [reagent.ratom :refer [reaction]]))
 
 
 ;;;;------------------------------
 ;;;; Queries
 ;;;;------------------------------
+
+(goog-define api-uri "http://localhost:3000")
 
 (defn general-query
   [db path]
@@ -27,6 +31,8 @@
 ;; Transient data items
 (register-sub :ui-state general-query)
 (register-sub :app-state general-query)
+
+
 
 
 ;;;;----------------------------
@@ -47,6 +53,7 @@
   "Takes a tabset and returns a new group containing them and some extra data"
   [tabs]
   {:date (.now js/Date)
+   :id   (.-uuid (random-uuid))
    :tabs tabs})
 
 (defn group-label [group]
@@ -210,13 +217,39 @@
       )
     ))
 
+(register-handler
+  :snapshot-post
+  (fn [app-state [_]]
+    (let [to-send (select-keys (:data app-state) [:instance-id :snapshots])]
+      (GET (str api-uri "/api/echo/" "hello")
+           {:handler       #(console/log "GET Handler" %)
+            :error-handler #(console/log "GET Error" %)})
+      (POST (str api-uri "/api/snapshot/many")
+            {:params        to-send
+             :handler       #(dispatch [:snapshot-post-success (:snapshots to-send)])
+             :error-handler #(dispatch [:log-content %])})
+      )
+    app-state
+    )
+  )
+
+(register-handler
+  :snapshot-post-success
+  (fn [app-state [_ snapshots]]
+    (console/log "Saved" snapshots)
+    ;; TODO: Remove only the snapshots we saved
+    (dispatch [:data-set :snapshots nil])
+    app-state
+    ))
+
 
 (register-handler
   :storage-loaded
   (fn [app-state [_ data]]
     ;; We create a new id if fir any reason we don't have one
     (when (empty? (:instance-id data))
-      (dispatch [:data-set :instance-id (uuid/uuid-string (uuid/make-random-uuid))]))
+      (dispatch [:data-set :instance-id (.-uuid (random-uuid))]))
+    (dispatch [:snapshot-post])
     ;; Return new data state. We don't return the new id because data-set also
     ;; saves it, the call below only sets the internal state
     (->> data
@@ -403,7 +436,7 @@
       ]])
   )
 
-(defn tab-groups []
+(defn div-tab-groups []
   (let [tab-groups (subscribe [:data :groups])
         group-edit (subscribe [:ui-state :group-edit])
         label      (subscribe [:ui-state :group-label])
@@ -416,7 +449,7 @@
        ])
     ))
 
-(defn snapshots []
+(defn div-snapshots []
   (let [snapshots (subscribe [:data :snapshots])
         to-list   (reaction (sort-by #(* -1 (:date %)) @snapshots))]
     (fn []
@@ -461,10 +494,10 @@
 
 
 (def component-dir {:monitor   current-tabs
-                    :groups    tab-groups
+                    :groups    div-tab-groups
                     :export    data-export
                     :import    data-import
-                    :snapshots snapshots})
+                    :snapshots div-snapshots})
 
 
 (defn main-section []
@@ -497,6 +530,7 @@
 
 (defn init []
   (console/log "Initialized booklet.core")
+  (console/log api-uri)
   (go (let [window (<! (windows/get-current))
             state  (<! (idle/query-state 30))]
         (dispatch-sync [:initialize (:tabs window)])

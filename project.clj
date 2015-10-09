@@ -4,6 +4,7 @@
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.122"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
+                 [cljs-ajax "0.3.14"]
                  [cljsjs/react-bootstrap "0.25.1-0" :exclusions [org.webjars.bower/jquery]]
                  [com.lucasbradstreet/cljs-uuid-utils "1.0.2"]
                  [khroma "0.1.0-SNAPSHOT"]
@@ -15,10 +16,12 @@
                                  [lein-chromebuild "0.3.0"]]
                    :cljsbuild   {:builds {:main
                                           {:source-paths ["src"]
-                                           :compiler     {:output-to     "target/unpacked/booklet.js"
-                                                          :output-dir    "target/js"
-                                                          :optimizations :whitespace
-                                                          :pretty-print  true}}}}
+                                           :compiler     {:output-to       "target/unpacked/booklet.js"
+                                                          :output-dir      "target/js"
+                                                          :optimizations   :whitespace
+                                                          :closure-defines {booklet.core/api-uri "http://localhost/from-the-config"}
+                                                          ; :closure-defines {"booklet.core.api_uri" "http://localhost/from-the-config"}
+                                                          :pretty-print    true}}}}
 
                    :chromebuild {:resource-paths ["resources/js"
                                                   "resources/html"
