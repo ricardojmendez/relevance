@@ -7,7 +7,7 @@
                  [cljs-ajax "0.3.14"]
                  [cljsjs/react-bootstrap "0.25.1-0" :exclusions [org.webjars.bower/jquery]]
                  [com.lucasbradstreet/cljs-uuid-utils "1.0.2"]
-                 [khroma "0.1.0-SNAPSHOT"]
+                 [khroma "0.1.0"]
                  [prismatic/dommy "1.1.0"]
                  [re-frame "0.4.1" :exclusions [cljsjs/react]]
                  ]
