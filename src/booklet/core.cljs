@@ -362,24 +362,28 @@
         ]])))
 
 (defn list-tabs [tabs is-history?]
-  (for [tab (sort-by :index tabs)]
-    (let [url     (:url tab)
-          favicon (:favIconUrl tab)
-          action  (if is-history?
-                    {:href url :target "_blank"}
-                    {:on-click #(tabs/activate (:id tab))}
-                    )]
-      ^{:key (:id tab)}
-      [:tr
-       [:td {:class "col-sm-1"} (if-not is-history? (:id tab))]
-       [:td {:class "col-sm-6"} [:a
-                                 action
-                                 (if favicon
-                                   [:img {:src    favicon
-                                          :width  16
-                                          :height 16}])
-                                 (:title tab)]]
-       [:td {:class "col-sm-5"} url]])))
+  (->>
+    tabs
+    (sort-by :index)
+    (map-indexed
+      (fn [i tab]
+        (let [url     (:url tab)
+              favicon (:favIconUrl tab)
+              action  (if is-history?
+                        {:href url :target "_blank"}
+                        {:on-click #(tabs/activate (:id tab))}
+                        )]
+          ^{:key i}
+          [:tr
+           [:td {:class "col-sm-1"} (if-not is-history? (:id tab))]
+           [:td {:class "col-sm-6"} [:a
+                                     action
+                                     (if favicon
+                                       [:img {:src    favicon
+                                              :width  16
+                                              :height 16}])
+                                     (:title tab)]]
+           [:td {:class "col-sm-5"} url]])))))
 
 (defn current-tabs []
   (let [tabs (reaction (filter-tabs @(subscribe [:app-state :tabs])))]
