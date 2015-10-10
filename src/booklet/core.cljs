@@ -205,7 +205,7 @@
                         (first (sort-by #(* -1 (:date %)) snapshots)))
           is-last?  (= (set (map :url tabs))
                        (set (map :url (:tabs last-snap))))
-          save?     (and (< 0 (count tabs))
+          save?     (and (< 1 (count tabs))
                          (not is-last?))
           ]
       (when save? (dispatch [:data-set :snapshots (conj snapshots new-group)]))
