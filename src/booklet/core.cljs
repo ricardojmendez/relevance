@@ -12,7 +12,7 @@
             [reagent.core :as reagent]
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]])
   (:require-macros [cljs.core :refer [goog-define]]
-                   [cljs.core.async.macros :refer [go]]
+                   [cljs.core.async.macros :refer [go go-loop]]
                    [reagent.ratom :refer [reaction]]))
 
 
@@ -517,13 +517,13 @@
 ;;;;----------------------------
 
 (defn dispatch-on-channel
-  "Dispatched msg when there's content received on the channel returned by
+  "Dispatches msg when there's content received on the channel returned by
   function chan-f."
   [msg chan-f]
-  (let [channel (chan-f)]
-    (go (while true
-          (let [content (<! channel)]
-            (dispatch [msg content]))))
+  (go-loop
+    [channel (chan-f)]
+    (dispatch [msg (<! channel)])
+    (recur channel)
     ))
 
 

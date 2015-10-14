@@ -5,19 +5,20 @@
             [khroma.extension :as ext]
             [khroma.windows :as windows]
             [cljs.core.async :refer [>! <!]])
-  (:require-macros [cljs.core.async.macros :refer [go]]))
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (defn init []
   (console/log "booklet.handler.init")
-  (let [conns (browser/on-clicked)]
-    (go (while true
-          (let [tab     (<! conns)
-                ext-url (str (ext/get-url "/") "index.html")
-                ;; We could just get the window-id from the tab, but that still
-                ;; requires us to make an extra call for the other tabs
-                window  (<! (windows/get-current))
-                our-tab (first (filter #(= ext-url (:url %)) (:tabs window)))]
-            (if our-tab
-              (tabs/activate (:id our-tab))
-              (tabs/create {:url ext-url}))
-          )))))
+  (go-loop
+    [channel (browser/on-clicked)]
+    (when (<! channel)
+      (let [ext-url (str (ext/get-url "/") "index.html")
+            ;; We could just get the window-id from the tab, but that still
+            ;; requires us to make an extra call for the other tabs
+            window  (<! (windows/get-current))
+            our-tab (first (filter #(= ext-url (:url %)) (:tabs window)))]
+        (if our-tab
+          (tabs/activate (:id our-tab))
+          (tabs/create {:url ext-url}))))
+    (recur channel)
+    ))
