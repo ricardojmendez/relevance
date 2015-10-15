@@ -1,0 +1,1 @@
+booklet.handler.init();
