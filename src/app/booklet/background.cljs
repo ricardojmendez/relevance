@@ -93,6 +93,31 @@
 
 
 (register-handler
+  :idle-state-change
+  (fn [app-state [_ message]]
+    (let [state       (:newState message)
+          all-tabs    (get-in app-state tab-data-path)
+          active-tabs (if (= "active" state)
+                        (get-in app-state [:app-state :idle])
+                        (filter :active (vals all-tabs)))
+          message     (if (= "active" state) :handle-activation :handle-deactivation)]
+      (console/log "State changed to" state message)
+      (doseq [tab active-tabs]
+        (dispatch [message tab]))
+      ;; We only store the idle tabs on the app state if we actually idled any.
+      ;; That way we avoid losing the originally stored idled tabs when we
+      ;; first go from active->idle and then from idle->locked (the first one
+      ;; would find tabs, the second one would and would overwrite the original
+      ;; saved set with an empty list).
+      (if active-tabs
+        (assoc-in app-state [:app-state :idle] active-tabs)
+        app-state)
+
+
+
+      )))
+
+(register-handler
   ::tab-activated
   (fn [app-state [_ {:keys [activeInfo]}]]
     (let [{:keys [tabId windowId]} activeInfo

@@ -161,23 +161,6 @@
     app-state))
 
 
-(register-handler
-  :idle-state-change
-  (fn [app-state [_ message]]
-    (let [path    [:app-state :interval]
-          handler (get-in app-state path)
-          state   (:newState message)]
-      (console/log "Idle state change:" state handler)
-      (cond
-        (and (nil? handler)
-             (= state "active")) (assoc-in app-state path (js/setInterval #(dispatch [:snapshot-take]) 60000))
-        (and (some? handler)
-             (not= state "active")) (do
-                                      (js/clearInterval handler)
-                                      (assoc-in app-state path nil))
-        :else app-state
-        ))))
-
 
 (register-handler
   :log-content
@@ -528,8 +511,7 @@
   (console/log api-uri)
   (go (let [window (<! (windows/get-current))
             state  (<! (idle/query-state 30))]
-        (dispatch-sync [:initialize (:tabs window)])
-        (dispatch-sync [:idle-state-change {:newState state}])))
+        (dispatch-sync [:initialize (:tabs window)])))
   (let [bg (runtime/connect)]
     (dispatch-on-channel :log-content storage/on-changed)
     (dispatch-on-channel :tab-created tabs/on-created)
@@ -537,7 +519,6 @@
     (dispatch-on-channel :tab-updated tabs/on-updated)
     (dispatch-on-channel :tab-replaced tabs/on-replaced)
     (idle/set-detection-interval 60)
-    (dispatch-on-channel :idle-state-change idle/on-state-changed)
     (go (>! bg :lol-i-am-a-popup)
         (console/log "Background said: " (<! bg))))
   (mount-components))
