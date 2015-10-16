@@ -1,5 +1,6 @@
 (ns booklet.core
   (:require [ajax.core :refer [GET POST PUT]]
+            [booklet.utils :refer [dispatch-on-channel]]
             [cljs.core.async :refer [>! <!]]
             [cljs.core :refer [random-uuid]]
             [cljsjs.react-bootstrap]
@@ -220,15 +221,15 @@
 (register-handler
   :snapshot-post
   (fn [app-state [_]]
-    (let [to-send (select-keys (:data app-state) [:instance-id :snapshots])]
-      (GET (str api-uri "/api/echo/" "hello")
-           {:handler       #(console/log "GET Handler" %)
-            :error-handler #(console/log "GET Error" %)})
-      (POST (str api-uri "/api/snapshot/many")
-            {:params        to-send
-             :handler       #(dispatch [:snapshot-post-success (:snapshots to-send)])
-             :error-handler #(dispatch [:log-content %])})
-      )
+    #_(let [to-send (select-keys (:data app-state) [:instance-id :snapshots])]
+        (GET (str api-uri "/api/echo/" "hello")
+             {:handler       #(console/log "GET Handler" %)
+              :error-handler #(console/log "GET Error" %)})
+        (POST (str api-uri "/api/snapshot/many")
+              {:params        to-send
+               :handler       #(dispatch [:snapshot-post-success (:snapshots to-send)])
+               :error-handler #(dispatch [:log-content %])})
+        )
     app-state
     )
   )
@@ -515,16 +516,6 @@
 ;;;;----------------------------
 ;;;; Chrome subscriptions
 ;;;;----------------------------
-
-(defn dispatch-on-channel
-  "Dispatches msg when there's content received on the channel returned by
-  function chan-f."
-  [msg chan-f]
-  (go-loop
-    [channel (chan-f)]
-    (dispatch [msg (<! channel)])
-    (recur channel)
-    ))
 
 
 (defn mount-components []
