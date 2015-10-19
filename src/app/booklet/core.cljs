@@ -105,57 +105,6 @@
     {:app-state {:tabs tabs}
      :ui-state  {:section :time-track}}))
 
-(register-handler
-  :group-add
-  (fn [app-state [_]]
-    (let [tabs    (get-in app-state [:app-state :tabs])
-          to-save (map (fn [m] (select-keys m relevant-tab-items)) tabs)
-          groups  (conj (or (get-in app-state [:data :groups]) '())
-                        (group-from-tabs to-save))]
-      (dispatch [:data-set :groups groups])
-      app-state)))
-
-(register-handler
-  :group-delete-set
-  (fn [app-state [_ group]]
-    (dispatch [:modal-info-set {:header       "Please confirm"
-                                :body         (str "Do you want to delete tab group " (group-label group) "?")
-                                :action-label "Kill it"
-                                :action       #(do
-                                                (dispatch [:modal-info-set nil])
-                                                (dispatch [:group-delete group]))}])
-    app-state))
-
-(register-handler
-  :group-delete
-  (fn [app-state [_ group]]
-    (let [original (get-in app-state [:data :groups])
-          groups   (remove #(= group %) original)]
-      (dispatch [:data-set :groups groups])
-      app-state)))
-
-
-(register-handler
-  :group-edit-set
-  (fn [app-state [_ group]]
-    (dispatch [:group-label-set (group-label group)])
-    (assoc-in app-state [:ui-state :group-edit] group)))
-
-
-(register-handler
-  :group-label-set
-  (fn [app-state [_ label]]
-    (assoc-in app-state [:ui-state :group-label] label)))
-
-(register-handler
-  :group-update
-  (fn [app-state [_ old-group new-group]]
-    (dispatch [:data-set :groups (->> (get-in app-state [:data :groups])
-                                      (remove #(= % old-group))
-                                      (cons new-group))])
-    app-state))
-
-
 
 (register-handler
   :log-content
@@ -238,8 +187,7 @@
 (defn navbar-item [label section current]
   [:li {:class (when (= section current) "active")}
    [:a {:on-click #(dispatch [:app-state-item [:ui-state :section] section])} label
-    (when (= section current) [:span {:class "sr-only"} "(current)"])]]
-  )
+    (when (= section current) [:span {:class "sr-only"} "(current)"])]])
 
 (defn navbar []
   (let [section (subscribe [:ui-state :section])]
@@ -257,7 +205,6 @@
          [:ul {:class "nav navbar-nav"}
           [navbar-item "Times" :time-track @section]
           [navbar-item "Monitor" :monitor @section]
-          [navbar-item "Groups" :groups @section]
           ]
          [:form {:class "navbar-form navbar-left", :role "search"}
           [:div {:class "form-group"}
@@ -326,59 +273,15 @@
         [:tbody
          (list-tabs @tabs :id)]
         ]
-       [:a {:class    "btn btn-primary btn-sm"
+
+       #_ [:a {:class    "btn btn-primary btn-sm"
             :on-click #(dispatch [:group-add])} "Save me"]
-       [:a {:class    "btn btn-primary btn-sm"
+       #_ [:a {:class    "btn btn-primary btn-sm"
             :on-click #(go (console/log (<! (storage/get))))} "Get"]
-       [:a {:class    "btn btn-primary btn-sm"
+       #_ [:a {:class    "btn btn-primary btn-sm"
             :on-click #(go (console/log "Usage: " (<! (storage/bytes-in-use))))} "Usage"]
        ; [:button {:on-click #(storage/clear)} "Clear"]
        ])))
-
-(defn list-groups
-  [group-list editable? group-edit edit-label]
-  (for [group group-list]
-    ^{:key (:date group)}
-    [:div
-     [:div
-      (if (= group group-edit)
-        [initial-focus-wrapper
-         [:input {:type      "text"
-                  :class     "form-control"
-                  :value     edit-label
-                  :on-change #(dispatch-sync [:group-label-set (-> % .-target .-value)])
-                  :on-blur   #(do
-                               (dispatch [:group-update group (assoc group :name edit-label)])
-                               (dispatch [:group-edit-set nil]))
-                  }]]
-        [:h3 {:on-click #(dispatch [:group-edit-set group])} (group-label group)]
-        )
-      (if editable? [:small [:a {:on-click #(dispatch [:group-delete-set group])} "Delete"]])
-      ]
-
-     [:table {:class "table table-striped table-hover"}
-      [:thead
-       [:tr
-        [:th "#"]
-        [:th "Title"]
-        [:th "URL"]]]
-      [:tbody
-       (list-tabs (filter-tabs (:tabs group)) nil)]
-      ]])
-  )
-
-(defn div-tab-groups []
-  (let [tab-groups (subscribe [:data :groups])
-        group-edit (subscribe [:ui-state :group-edit])
-        label      (subscribe [:ui-state :group-label])
-        to-list    (reaction (sort-by #(* -1 (:date %)) @tab-groups))]
-    (fn []
-      [:div
-       [modal-confirm]
-       [:div {:class "page-header"} [:h2 "Previous groups"]]
-       (list-groups @to-list true @group-edit @label)
-       ])
-    ))
 
 (defn div-timetrack []
   (let [url-times  (subscribe [:data :url-times])
@@ -433,7 +336,6 @@
 
 
 (def component-dir {:monitor    current-tabs
-                    :groups     div-tab-groups
                     :export     data-export
                     :import     data-import
                     :time-track div-timetrack})
