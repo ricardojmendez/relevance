@@ -11,8 +11,7 @@
             [khroma.tabs :as tabs]
             [khroma.windows :as windows]
             [reagent.core :as reagent]
-            [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
-            [cognitect.transit :as transit])
+            [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]])
   (:require-macros [cljs.core :refer [goog-define]]
                    [cljs.core.async.macros :refer [go go-loop]]
                    [reagent.ratom :refer [reaction]]))
@@ -33,8 +32,6 @@
 (register-sub :app-state general-query)
 
 
-
-
 ;;;;----------------------------
 ;;;; Functions
 ;;;;----------------------------
@@ -49,24 +46,6 @@
   [tabs]
   (remove #(.startsWith (:url %) "chrome") tabs))
 
-(defn group-from-tabs
-  "Takes a tabset and returns a new group containing them and some extra data"
-  [tabs]
-  {:date (.now js/Date)
-   :id   (.-uuid (random-uuid))
-   :tabs tabs})
-
-(defn group-label [group]
-  (or (:name group) (:date group)))
-
-(def initial-focus-wrapper
-  (with-meta identity
-             {:component-did-mount #(.focus (reagent/dom-node %))}))
-
-(defn remove-tab
-  "Removed a tab from a collection by id"
-  [col id]
-  (remove #(= (:id %) id) col))
 
 ;; Tab items we actually care about
 (def relevant-tab-items [:index :url :title :favIconUrl])
@@ -82,6 +61,9 @@
     (assoc-in app-state path item)))
 
 
+;; :data-import currently gets dispatched from both booklet.core
+;; and booklet.background, not entirely happy with that. Needs
+;; further clean up
 (register-handler
   :data-import
   (fn [app-state [_ transit-data]]
@@ -100,9 +82,9 @@
 
 (register-handler
   :initialize
-  (fn [_ [_ tabs]]
+  (fn [_]
     (go (dispatch [:data-import (:data (<! (storage/get)))]))
-    {:app-state {:tabs tabs}
+    {:app-state {}
      :ui-state  {:section :time-track}}))
 
 
@@ -125,47 +107,11 @@
   (fn [app-state [_ message]]
     (let [new-value (get-in message [:changes :data :newValue])
           data      (from-transit new-value)]
-      (console/log "Storage changed:" message)
-      (console/log "New data value " data)
       (if (not-empty data)
         (assoc app-state :data data)
         app-state
         ))
     ))
-
-
-(register-handler
-  :tab-created
-  (fn [app-state [_ msg]]
-    (console/trace "Created" (:tab msg))
-    (assoc app-state [:app-state :tabs] (conj (get-in app-state [:app-state :tabs]) (:tab msg)))))
-
-
-(register-handler
-  :tab-updated
-  (fn [app-state [_ msg]]
-    (console/trace "Updated:" msg)
-    (assoc-in app-state
-              [:app-state :tabs]
-              (-> (get-in app-state [:app-state :tabs])
-                  (remove-tab (:tabId msg))
-                  (conj (:tab msg))))
-    ))
-
-(register-handler
-  :tab-removed
-  (fn [app-state [_ msg]]
-    (console/trace "Removed:" (:tabId msg) msg)
-    (assoc-in app-state [:app-state :tabs] (remove-tab (get-in app-state [:app-state :tabs]) (:tabId msg)))))
-
-(register-handler
-  :tab-replaced
-  (fn [app-state [_ msg]]
-    (console/trace "Replaced:" msg)
-    ; We don't need to create a new item for the tab being added, as
-    ; we'll also get an "update" message which will add it.
-    (assoc-in app-state [:app-state :tabs] (remove-tab (get-in app-state [:app-state :tabs]) (:removed msg)))))
-
 
 
 ;;;;------------------------------
@@ -204,7 +150,6 @@
         [:div {:class "collapse navbar-collapse", :id "bs-example-navbar-collapse-1"}
          [:ul {:class "nav navbar-nav"}
           [navbar-item "Times" :time-track @section]
-          [navbar-item "Monitor" :monitor @section]
           ]
          [:form {:class "navbar-form navbar-left", :role "search"}
           [:div {:class "form-group"}
@@ -215,6 +160,7 @@
           [navbar-item "Import" :import @section]]]]])))
 
 
+;; We could actually move modal-confirm to a component namespace, parametrize it.
 (defn modal-confirm []
   (let [modal-info (subscribe [:ui-state :modal-info])
         ;; On the next one, we can't use not-empty because (= nil (not-empty nil)), and :show expects true/false,
@@ -243,15 +189,12 @@
     (map-indexed
       (fn [i tab]
         (let [url     (:url tab)
-              favicon (:favIconUrl tab)
-              action  (if is-history?
-                        {:href url :target "_blank"}
-                        {:on-click #(tabs/activate (:id tab))})]
+              favicon (:favIconUrl tab)]
           ^{:key i}
           [:tr
            [:td {:class "col-sm-1"} (when disp-key (disp-key tab))]
            [:td {:class "col-sm-6"} [:a
-                                     action
+                                     {:href url :target "_blank"}
                                      (if favicon
                                        [:img {:src    favicon
                                               :width  16
@@ -259,29 +202,6 @@
                                      (:title tab)]]
            [:td {:class "col-sm-5"} url]])))))
 
-(defn current-tabs []
-  (let [tabs (reaction (filter-tabs @(subscribe [:app-state :tabs])))]
-    (fn []
-      [:div
-       [:div {:class "page-header"} [:h2 "Current tabs"]]
-       [:table {:class "table table-striped table-hover"}
-        [:thead
-         [:tr
-          [:th "#"]
-          [:th "Title"]
-          [:th "URL"]]]
-        [:tbody
-         (list-tabs @tabs :id)]
-        ]
-
-       #_ [:a {:class    "btn btn-primary btn-sm"
-            :on-click #(dispatch [:group-add])} "Save me"]
-       #_ [:a {:class    "btn btn-primary btn-sm"
-            :on-click #(go (console/log (<! (storage/get))))} "Get"]
-       #_ [:a {:class    "btn btn-primary btn-sm"
-            :on-click #(go (console/log "Usage: " (<! (storage/bytes-in-use))))} "Usage"]
-       ; [:button {:on-click #(storage/clear)} "Clear"]
-       ])))
 
 (defn div-timetrack []
   (let [url-times  (subscribe [:data :url-times])
@@ -335,8 +255,7 @@
        ])))
 
 
-(def component-dir {:monitor    current-tabs
-                    :export     data-export
+(def component-dir {:export     data-export
                     :import     data-import
                     :time-track div-timetrack})
 
@@ -361,15 +280,8 @@
 
 (defn init []
   (console/log "Initialized booklet.core")
-  (go (let [window (<! (windows/get-current))]
-        (dispatch-sync [:initialize (:tabs window)])))
+  (dispatch-sync [:initialize])
   (let [bg (runtime/connect)]
     (dispatch-on-channel ::storage-changed storage/on-changed)
-    (dispatch-on-channel :tab-created tabs/on-created)
-    (dispatch-on-channel :tab-removed tabs/on-removed)
-    (dispatch-on-channel :tab-updated tabs/on-updated)
-    (dispatch-on-channel :tab-replaced tabs/on-replaced)
-    (idle/set-detection-interval 60)
-    (go (>! bg :lol-i-am-a-popup)
-        (console/log "Background said: " (<! bg))))
+    (idle/set-detection-interval 60))
   (mount-components))
