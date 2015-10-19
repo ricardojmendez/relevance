@@ -1,6 +1,7 @@
 (ns booklet.background
   (:require [cljs.core.async :refer [>! <!]]
-            [booklet.utils :refer [dispatch-on-channel]]
+            [booklet.utils :refer [dispatch-on-channel to-transit]]
+            [cognitect.transit :as transit]
             [khroma.log :as console]
             [khroma.runtime :as runtime]
             [khroma.windows :as windows]
@@ -9,7 +10,8 @@
             [khroma.tabs :as tabs]
             [reagent.core :as reagent]
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]])
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]
+                   ))
 
 
 
@@ -26,13 +28,13 @@
 
 (defn now [] (.now js/Date))
 
-(def relevant-tab-keys [:windowId :id :active :url :selected :start-time])
+(def relevant-tab-keys [:windowId :id :active :url :selected :start-time :title :favIconUrl])
 
 (def select-tab-keys #(select-keys % relevant-tab-keys))
 (def add-tab-times #(assoc % :start-time (if (:active %) (now) 0)))
 
 (def tab-data-path [:app-state :tab-tracking])
-(def url-time-path [:data :urls])
+(def url-time-path [:data :url-times])
 
 (defn process-tab
   "Filters a tab down to the relevant keys, and adds a start time which is
@@ -64,6 +66,17 @@
 
 
 (register-handler
+  :data-set
+  (fn [app-state [_ key item]]
+    (let [new-state    (assoc-in app-state [:data key] item)
+          transit-data (to-transit (:data new-state))]
+      (console/log "Saving" key)
+      (storage/set {:data transit-data})
+      (console/log "New state" new-state)
+      new-state)
+    ))
+
+(register-handler
   :handle-activation
   (fn [app-state [_ tab]]
     (console/log "Handling activation" tab)
@@ -83,7 +96,7 @@
     (console/log "Deactivating" tab removed?)
     (when (or (:active tab)
               (< 0 (:start-time tab)))
-      (dispatch [:track-time (:url tab) (- (now) (:start-time tab))]))
+      (dispatch [:track-time tab (- (now) (:start-time tab))]))
     (if removed?
       app-state
       (assoc-in app-state
@@ -112,10 +125,18 @@
       (if active-tabs
         (assoc-in app-state [:app-state :idle] active-tabs)
         app-state)
-
-
-
       )))
+
+
+(register-handler
+  :start-tracking
+  (fn [app-state [_ tabs]]
+    ; (dispatch [:data-set :url-times {}])
+    (-> app-state
+        (assoc-in tab-data-path (process-tabs tabs))
+        (assoc-in url-time-path
+                  (or (get-in app-state url-time-path) {})))))
+
 
 (register-handler
   ::tab-activated
@@ -132,14 +153,15 @@
       (doseq [tab prev-active]
         (dispatch [:handle-deactivation tab]))
       (dispatch [:handle-activation (get all-tabs tabId)])
-      (console/log "Activated" tabId "from window" windowId)
-      (console/log "Previously active" prev-active))
+      ; (console/log "Activated" tabId "from window" windowId)
+      ; (console/log "Previously active" prev-active)
+      )
     app-state))
 
 (register-handler
   ::tab-created
   (fn [app-state [_ {:keys [tab]}]]
-    (console/log "Created" tab)
+    ; (console/log "Created" tab)
     (when (:active tab)
       ;; If we just created an active tab, make sure we go through the activation cycle
       (dispatch [::tab-activated {:activeInfo {:tabId    (:id tab)
@@ -156,10 +178,9 @@
     (let [id   (:tabId msg)
           tabs (get-in app-state tab-data-path)
           tab  (get tabs id)]
-      (console/trace "Removed id:" id "Previous" tab (:active tab))
+      ; (console/trace "Removed id:" id "Previous" tab (:active tab))
       (dispatch [:handle-deactivation tab true])                      ; We're not only deactivating it, we're destroying it
       (assoc-in app-state tab-data-path (dissoc tabs id)))))
-
 
 (register-handler
   ::tab-replaced
@@ -167,7 +188,7 @@
     ;; When we get a tab-replaced, we only get two ids. We don't get any
     ;; other tab information. We'll treat this as a remove and a create,
     ;; and let those event handlers handle it.
-    (console/log "Replaced" added removed)
+    ; (console/log "Replaced" added removed)
     (dispatch [::tab-removed {:tabId removed}])
     (go (dispatch [::tab-created {:tab (<! (tabs/get-tab added))}]))
     app-state
@@ -180,22 +201,37 @@
       (when (and (:active tab)
                  (not= (:url old-tab)
                        (:url tab)))
-        (do
-          (console/log "Tab URL changed while active")
-          (dispatch [:handle-deactivation old-tab])
-          (dispatch [:handle-activation tab]))
-        )
-      ;; TODO: Handle case where the url changed
-      )
-    (console/log "Updated" tabId tab (get-in app-state (conj tab-data-path tabId)))
+        (console/log "Tab URL changed while active")
+        (dispatch [:handle-deactivation old-tab])
+        (dispatch [:handle-activation tab])
+        ))
+    ; (console/log "Updated" tabId tab (get-in app-state (conj tab-data-path tabId)))
     app-state
     ))
 
+
 (register-handler
   :track-time
-  (fn [app-state [_ url time]]
-    (console/log time "milliseconds spent at" url)
-    app-state))
+  (fn [app-state [_ tab time]]
+    (let [url-times (get-in app-state url-time-path)
+          url-key   (:url tab)
+          url-time  (or (get url-times url-key)
+                        {:url       (:url tab)
+                         :time      0
+                         :timestamp 0})
+          ;; Don't track two messages too close
+          track?    (and (not-empty url-key)
+                         (< 100 (- (now) (:timestamp url-time))))
+          new-time  (assoc url-time :time (+ (:time url-time) time)
+                                    :title (:title tab)
+                                    :favIconUrl (:favIconUrl tab)
+                                    :timestamp (now))]
+      (console/log time track? "milliseconds spent at" url-key)
+      (console/log "Previous" url-time)
+      (when track?
+        (dispatch [:data-set :url-times (assoc url-times url-key new-time)]))
+      app-state
+      )))
 
 ;; TODO
 ;; - Track URL state changes
@@ -205,13 +241,7 @@
 ;; TODO: Handle detached tabs, looks like we don't get an activate for them.
 
 
-(register-handler
-  :start-tracking
-  (fn [app-state [_ tabs]]
-    (-> app-state
-        (assoc-in tab-data-path (process-tabs tabs))
-        (assoc-in url-time-path
-                  (or (get-in app-state url-time-path) {})))))
+
 
 
 (defn start-tracking []

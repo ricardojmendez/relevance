@@ -1,6 +1,6 @@
 (ns booklet.core
   (:require [ajax.core :refer [GET POST PUT]]
-            [booklet.utils :refer [dispatch-on-channel]]
+            [booklet.utils :refer [dispatch-on-channel from-transit]]
             [cljs.core.async :refer [>! <!]]
             [cljs.core :refer [random-uuid]]
             [cljsjs.react-bootstrap]
@@ -11,7 +11,8 @@
             [khroma.tabs :as tabs]
             [khroma.windows :as windows]
             [reagent.core :as reagent]
-            [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]])
+            [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
+            [cognitect.transit :as transit])
   (:require-macros [cljs.core :refer [goog-define]]
                    [cljs.core.async.macros :refer [go go-loop]]
                    [reagent.ratom :refer [reaction]]))
@@ -20,8 +21,6 @@
 ;;;;------------------------------
 ;;;; Queries
 ;;;;------------------------------
-
-(goog-define api-uri "http://localhost:3000")
 
 (defn general-query
   [db path]
@@ -85,30 +84,26 @@
 
 (register-handler
   :data-import
-  (fn [app-state [_ json-data]]
-    (let [new-data (clojure.walk/keywordize-keys (js->clj (.parse js/JSON json-data)))]
+  (fn [app-state [_ transit-data]]
+    (let [new-data (from-transit transit-data)]
+      (console/log "New data on import" new-data)
       (doseq [[key item] new-data]
         ;; Dispatch instead of just doing an assoc so that it's also saved
         (dispatch [:data-set key item]))
+      (when (empty? (:instance-id new-data))
+        (dispatch [:data-set :instance-id (.-uuid (random-uuid))]))
       (-> app-state
-          (assoc-in [:ui-state :section] :groups)
+          (assoc-in [:ui-state :section] :time-track)
           (assoc-in [:app-state :import] nil))
       )))
-
-(register-handler
-  :data-set
-  (fn [app-state [_ key item]]
-    (storage/set {key item})
-    (assoc-in app-state [:data key] item)
-    ))
 
 
 (register-handler
   :initialize
   (fn [_ [_ tabs]]
-    (go (dispatch [:storage-loaded (<! (storage/get))]))
+    (go (dispatch [:data-import (:data (<! (storage/get)))]))
     {:app-state {:tabs tabs}
-     :ui-state  {:section :monitor}}))
+     :ui-state  {:section :time-track}}))
 
 (register-handler
   :group-add
@@ -177,68 +172,16 @@
 
 
 (register-handler
-  :snapshot-take
-  (fn [app-state [_]]
-    (let [path      [:data :snapshots]
-          snapshots (or (get-in app-state path) '())
-          tabs      (->> (get-in app-state [:app-state :tabs])
-                         filter-tabs
-                         (map #(select-keys % relevant-tab-items)))
-          new-group (group-from-tabs tabs)
-          last-snap (or (get-in app-state [:app-state :last-snapshot])
-                        (first (sort-by #(* -1 (:date %)) snapshots)))
-          is-last?  (= (set (map :url tabs))
-                       (set (map :url (:tabs last-snap))))
-          save?     (and (< 1 (count tabs))
-                         (not is-last?))
-          ]
-      (when save? (dispatch [:data-set :snapshots (conj snapshots new-group)]))
-      ; (console/log "Current" (set tabs) "Last" (set (:tabs last-snap)) "Last snap" last-snap)
-      ; (console/log "Tick tock snapshot " save? (.now js/Date))
-      (if save?
-        (assoc-in app-state [:app-state :last-snapshot] new-group)
-        app-state)
-      )
-    ))
-
-(register-handler
-  :snapshot-post
-  (fn [app-state [_]]
-    #_(let [to-send (select-keys (:data app-state) [:instance-id :snapshots])]
-        (GET (str api-uri "/api/echo/" "hello")
-             {:handler       #(console/log "GET Handler" %)
-              :error-handler #(console/log "GET Error" %)})
-        (POST (str api-uri "/api/snapshot/many")
-              {:params        to-send
-               :handler       #(dispatch [:snapshot-post-success (:snapshots to-send)])
-               :error-handler #(dispatch [:log-content %])})
-        )
-    app-state
-    )
-  )
-
-(register-handler
-  :snapshot-post-success
-  (fn [app-state [_ snapshots]]
-    (console/log "Saved" snapshots)
-    ;; TODO: Remove only the snapshots we saved
-    (dispatch [:data-set :snapshots nil])
-    app-state
-    ))
-
-
-(register-handler
-  :storage-loaded
-  (fn [app-state [_ data]]
-    ;; We create a new id if fir any reason we don't have one
-    (when (empty? (:instance-id data))
-      (dispatch [:data-set :instance-id (.-uuid (random-uuid))]))
-    (dispatch [:snapshot-post])
-    ;; Return new data state. We don't return the new id because data-set also
-    ;; saves it, the call below only sets the internal state
-    (->> data
-         (merge (:data app-state))
-         (assoc app-state :data))
+  ::storage-changed
+  (fn [app-state [_ message]]
+    (let [new-value (get-in message [:changes :data :newValue])
+          data      (from-transit new-value)]
+      (console/log "Storage changed:" message)
+      (console/log "New data value " data)
+      (if (not-empty data)
+        (assoc app-state :data data)
+        app-state
+        ))
     ))
 
 
@@ -312,9 +255,10 @@
          [:a {:class "navbar-brand" :href "http://numergent.com" :target "_new"} "Booklet"]]
         [:div {:class "collapse navbar-collapse", :id "bs-example-navbar-collapse-1"}
          [:ul {:class "nav navbar-nav"}
+          [navbar-item "Times" :time-track @section]
           [navbar-item "Monitor" :monitor @section]
           [navbar-item "Groups" :groups @section]
-          [navbar-item "Snapshots" :snapshots @section]]
+          ]
          [:form {:class "navbar-form navbar-left", :role "search"}
           [:div {:class "form-group"}
            [:input {:type "text", :class "form-control", :placeholder "Search"}]]
@@ -345,7 +289,7 @@
                   :on-click (:action @modal-info)} (:action-label @modal-info)]
         ]])))
 
-(defn list-tabs [tabs is-history?]
+(defn list-tabs [tabs disp-key]
   (->>
     tabs
     (sort-by :index)
@@ -355,11 +299,10 @@
               favicon (:favIconUrl tab)
               action  (if is-history?
                         {:href url :target "_blank"}
-                        {:on-click #(tabs/activate (:id tab))}
-                        )]
+                        {:on-click #(tabs/activate (:id tab))})]
           ^{:key i}
           [:tr
-           [:td {:class "col-sm-1"} (if-not is-history? (:id tab))]
+           [:td {:class "col-sm-1"} (when disp-key (disp-key tab))]
            [:td {:class "col-sm-6"} [:a
                                      action
                                      (if favicon
@@ -381,7 +324,7 @@
           [:th "Title"]
           [:th "URL"]]]
         [:tbody
-         (list-tabs @tabs false)]
+         (list-tabs @tabs :id)]
         ]
        [:a {:class    "btn btn-primary btn-sm"
             :on-click #(dispatch [:group-add])} "Save me"]
@@ -420,7 +363,7 @@
         [:th "Title"]
         [:th "URL"]]]
       [:tbody
-       (list-tabs (filter-tabs (:tabs group)) true)]
+       (list-tabs (filter-tabs (:tabs group)) nil)]
       ]])
   )
 
@@ -437,14 +380,22 @@
        ])
     ))
 
-(defn div-snapshots []
-  (let [snapshots (subscribe [:data :snapshots])
-        to-list   (reaction (sort-by #(* -1 (:date %)) @snapshots))]
+(defn div-timetrack []
+  (let [url-times  (subscribe [:data :url-times])
+        url-values (reaction (vals @url-times))
+        to-list    (reaction (sort-by #(* -1 (:time %)) @url-values))]
     (fn []
       [:div
-       [:div {:class "page-header"} [:h2 "Snapshots"]]
-       (list-groups @to-list false nil nil)
-       ])
+       [:div {:class "page-header"} [:h2 "Times"]]
+       [:table {:class "table table-striped table-hover"}
+        [:thead
+         [:tr
+          [:th "#"]
+          [:th "Title"]
+          [:th "URL"]]]
+        [:tbody
+         (list-tabs @to-list :time)]
+        ]])
     ))
 
 
@@ -481,11 +432,11 @@
        ])))
 
 
-(def component-dir {:monitor   current-tabs
-                    :groups    div-tab-groups
-                    :export    data-export
-                    :import    data-import
-                    :snapshots div-snapshots})
+(def component-dir {:monitor    current-tabs
+                    :groups     div-tab-groups
+                    :export     data-export
+                    :import     data-import
+                    :time-track div-timetrack})
 
 
 (defn main-section []
@@ -508,12 +459,10 @@
 
 (defn init []
   (console/log "Initialized booklet.core")
-  (console/log api-uri)
-  (go (let [window (<! (windows/get-current))
-            state  (<! (idle/query-state 30))]
+  (go (let [window (<! (windows/get-current))]
         (dispatch-sync [:initialize (:tabs window)])))
   (let [bg (runtime/connect)]
-    (dispatch-on-channel :log-content storage/on-changed)
+    (dispatch-on-channel ::storage-changed storage/on-changed)
     (dispatch-on-channel :tab-created tabs/on-created)
     (dispatch-on-channel :tab-removed tabs/on-removed)
     (dispatch-on-channel :tab-updated tabs/on-updated)

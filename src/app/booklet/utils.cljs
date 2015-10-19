@@ -1,5 +1,6 @@
 (ns booklet.utils
-  (:require [re-frame.core :refer [dispatch dispatch-sync]])
+  (:require [re-frame.core :refer [dispatch dispatch-sync]]
+            [cognitect.transit :as transit])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 
@@ -12,3 +13,13 @@
     (dispatch [msg (<! channel)])
     (recur channel)
     ))
+
+
+(defn to-transit
+  [data]
+  (transit/write (transit/writer :json) data))
+
+(defn from-transit
+  [transit-data]
+  (transit/read (transit/reader :json) transit-data)
+  )
