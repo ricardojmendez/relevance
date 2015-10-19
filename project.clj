@@ -2,12 +2,12 @@
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.clojure/clojurescript "1.7.122"]
+                 [org.clojure/clojurescript "1.7.145"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
 
-                 [cljs-ajax "0.3.14"]
-                 [cljsjs/react-bootstrap "0.25.1-0" :exclusions [org.webjars.bower/jquery]]
-                 [devcards "0.2.0-4"]
+                 [cljs-ajax "0.5.0"]
+                 [cljsjs/react-bootstrap "0.25.2-0" :exclusions [org.webjars.bower/jquery]]
+                 [devcards "0.2.0-8"]
                  [khroma "0.2.0-SNAPSHOT"]
                  [prismatic/dommy "1.1.0"]
                  [re-frame "0.4.1" :exclusions [cljsjs/react]]
