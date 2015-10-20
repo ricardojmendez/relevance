@@ -1,17 +1,17 @@
 (ns booklet.utils
-  (:require [re-frame.core :refer [dispatch dispatch-sync]]
+  (:require [cljs.core.async :refer [<!]]
             [cognitect.transit :as transit]
             [reagent.core :as reagent])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 
-(defn dispatch-on-channel
+(defn on-channel
   "Dispatches msg when there's content received on the channel returned by
-  function chan-f."
-  [msg chan-f]
+  function chan-f. Expects a dispatch function."
+  [chan-fn dispatch-fn msg]
   (go-loop
-    [channel (chan-f)]
-    (dispatch [msg (<! channel)])
+    [channel (chan-fn)]
+    (dispatch-fn [msg (<! channel)])
     (recur channel)
     ))
 

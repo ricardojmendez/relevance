@@ -1,15 +1,12 @@
 (ns booklet.core
   (:require [ajax.core :refer [GET POST PUT]]
-            [booklet.utils :refer [dispatch-on-channel from-transit]]
+            [booklet.utils :refer [on-channel from-transit]]
             [cljs.core.async :refer [>! <!]]
             [cljs.core :refer [random-uuid]]
             [cljsjs.react-bootstrap]
             [khroma.idle :as idle]
             [khroma.log :as console]
-            [khroma.runtime :as runtime]
             [khroma.storage :as storage]
-            [khroma.tabs :as tabs]
-            [khroma.windows :as windows]
             [reagent.core :as reagent]
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]])
   (:require-macros [cljs.core :refer [goog-define]]
@@ -59,25 +56,6 @@
   :app-state-item
   (fn [app-state [_ path item]]
     (assoc-in app-state path item)))
-
-
-;; :data-import currently gets dispatched from both booklet.core
-;; and booklet.background, not entirely happy with that. Needs
-;; further clean up
-(register-handler
-  :data-import
-  (fn [app-state [_ transit-data]]
-    (let [new-data (from-transit transit-data)]
-      (console/log "New data on import" new-data)
-      (doseq [[key item] new-data]
-        ;; Dispatch instead of just doing an assoc so that it's also saved
-        (dispatch [:data-set key item]))
-      (when (empty? (:instance-id new-data))
-        (dispatch [:data-set :instance-id (.-uuid (random-uuid))]))
-      (-> app-state
-          (assoc-in [:ui-state :section] :time-track)
-          (assoc-in [:app-state :import] nil))
-      )))
 
 
 (register-handler
@@ -281,7 +259,6 @@
 (defn init []
   (console/log "Initialized booklet.core")
   (dispatch-sync [:initialize])
-  (let [bg (runtime/connect)]
-    (dispatch-on-channel ::storage-changed storage/on-changed)
-    (idle/set-detection-interval 60))
+  (on-channel storage/on-changed dispatch ::storage-changed)
+  (idle/set-detection-interval 60)
   (mount-components))

@@ -15,7 +15,7 @@
     "128": "icon128.png"
   },
   "permissions": [
-    "tabs", "storage", "idle", "http://localhost:3000/"
+    "tabs", "storage", "idle"
   ],
   "background": {
     "scripts": [
@@ -23,7 +23,7 @@
       "background.js",
       "handler.js"
     ],
-    "persistent": true
+    "persistent": false
   },
   "manifest_version": 2
 }

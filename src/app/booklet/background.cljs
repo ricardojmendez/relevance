@@ -1,6 +1,7 @@
 (ns booklet.background
-  (:require [cljs.core.async :refer [>! <!]]
-            [booklet.utils :refer [dispatch-on-channel to-transit]]
+  (:require [clojure.set :refer [difference]]
+            [cljs.core.async :refer [>! <!]]
+            [booklet.utils :refer [on-channel from-transit to-transit]]
             [cognitect.transit :as transit]
             [khroma.log :as console]
             [khroma.runtime :as runtime]
@@ -8,10 +9,8 @@
             [khroma.storage :as storage]
             [khroma.idle :as idle]
             [khroma.tabs :as tabs]
-            [reagent.core :as reagent]
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]])
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]]
-                   ))
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 
 
@@ -51,18 +50,71 @@
     add-tab-times))
 
 
+(defn tab-list-to-map
+  [tabs]
+  (reduce #(assoc % (:id %2) %2) {} tabs))
+
 (defn process-tabs
   "Take the tabs we have, filter them down and return them grouped by id."
   [tabs]
   (->>
     tabs
     (map process-tab)
-    (reduce #(assoc % (:id %2) %2) {})))
+    tab-list-to-map))
 
 
 ;;;;-------------------------------------
 ;;;; Handlers
 ;;;;-------------------------------------
+
+
+;; :data-import currently gets dispatched from both booklet.core
+;; and booklet.background, not entirely happy with that. Needs
+;; further clean up
+(register-handler
+  :data-import
+  (fn [app-state [_ transit-data]]
+    (let [new-data (from-transit transit-data)]
+      (console/log "New data on import" new-data)
+      ;; Create a new id if we don't have one
+      (when (empty? (:instance-id new-data))
+        (dispatch [:data-set :instance-id (.-uuid (random-uuid))]))
+      ;; Dispatch instead of just doing an assoc so that it's also saved
+      (doseq [[key item] new-data]
+        (dispatch [:data-set key item]))
+      ;; Once we've dispatched these, let's dispatch evaluate the state
+      (dispatch [:data-import-done])
+      (-> app-state
+          (assoc-in [:ui-state :section] :time-track)
+          (assoc-in [:app-state :import] nil))
+      )))
+
+
+(register-handler
+  :data-import-done
+  (fn [app-state [_]]
+    (let [suspend-info    (get-in app-state [:data :suspend-info])
+          old-tabs        (:active-tabs suspend-info)
+          all-tabs        (get-in app-state tab-data-path)
+          active-tabs     (filter :active (vals all-tabs))
+          ;; Find all inactive tabs
+          now-inactive    (filter #(empty? (filter
+                                             (fn [t]
+                                               (and (= (:id t) (:id %))
+                                                    (= (:url t) (:url %))))
+                                             active-tabs))
+                                  old-tabs)
+          ;; Get the still active tabs
+          still-active    (difference (set old-tabs) (set now-inactive))
+          active-old-tabs (tab-list-to-map still-active)]
+      ;; De-activate every inactive tab
+      (doseq [tab now-inactive]
+        (dispatch [:handle-deactivation tab true (:time suspend-info)]))
+      (console/log "From suspend:" suspend-info)
+      (console/log "Still active:" active-old-tabs)
+      app-state
+      )
+    ))
 
 
 (register-handler
@@ -92,11 +144,15 @@
 
 (register-handler
   :handle-deactivation
-  (fn [app-state [_ tab removed?]]
-    (console/log "Deactivating" tab removed?)
+  (fn
+    ; We get three parameters: the tab, if the item is being removed,
+    ; and the time at which it was deactivated (which defaults to now)
+    [app-state [_ tab removed? end-time]]
+    (console/log " Deactivating " tab removed?)
     (when (or (:active tab)
               (< 0 (:start-time tab)))
-      (dispatch [:track-time tab (- (now) (:start-time tab))]))
+      (dispatch [:track-time tab (- (or end-time (now))
+                                    (:start-time tab))]))
     (if removed?
       app-state
       (assoc-in app-state
@@ -110,11 +166,11 @@
   (fn [app-state [_ message]]
     (let [state       (:newState message)
           all-tabs    (get-in app-state tab-data-path)
-          active-tabs (if (= "active" state)
+          active-tabs (if (= " active " state)
                         (get-in app-state [:app-state :idle])
                         (filter :active (vals all-tabs)))
-          message     (if (= "active" state) :handle-activation :handle-deactivation)]
-      (console/log "State changed to" state message)
+          message     (if (= " active " state) :handle-activation :handle-deactivation)]
+      (console/log " State changed to " state message)
       (doseq [tab active-tabs]
         (dispatch [message tab]))
       ;; We only store the idle tabs on the app state if we actually idled any.
@@ -137,6 +193,17 @@
         (assoc-in url-time-path
                   (or (get-in app-state url-time-path) {})))))
 
+(register-handler
+  :suspend
+  (fn [app-state [_]]
+    (let [all-tabs    (get-in app-state tab-data-path)
+          active-tabs (filter :active (vals all-tabs))]
+      (dispatch [:data-set :suspend-info {:time        (now)
+                                          :active-tabs active-tabs}]))
+    ;; The message itself is not relevant, we only care that we are being suspended
+    app-state
+    ))
+
 
 (register-handler
   ::tab-activated
@@ -153,15 +220,15 @@
       (doseq [tab prev-active]
         (dispatch [:handle-deactivation tab]))
       (dispatch [:handle-activation (get all-tabs tabId)])
-      ; (console/log "Activated" tabId "from window" windowId)
-      ; (console/log "Previously active" prev-active)
+      ; (console/log " Activated " tabId " from window " windowId)
+      ; (console/log " Previously active " prev-active)
       )
     app-state))
 
 (register-handler
   ::tab-created
   (fn [app-state [_ {:keys [tab]}]]
-    ; (console/log "Created" tab)
+    ; (console/log " Created " tab)
     (when (:active tab)
       ;; If we just created an active tab, make sure we go through the activation cycle
       (dispatch [::tab-activated {:activeInfo {:tabId    (:id tab)
@@ -178,7 +245,7 @@
     (let [id   (:tabId msg)
           tabs (get-in app-state tab-data-path)
           tab  (get tabs id)]
-      ; (console/trace "Removed id:" id "Previous" tab (:active tab))
+      ; (console/trace " Removed id: " id " Previous " tab (:active tab))
       (dispatch [:handle-deactivation tab true])                      ; We're not only deactivating it, we're destroying it
       (assoc-in app-state tab-data-path (dissoc tabs id)))))
 
@@ -188,7 +255,7 @@
     ;; When we get a tab-replaced, we only get two ids. We don't get any
     ;; other tab information. We'll treat this as a remove and a create,
     ;; and let those event handlers handle it.
-    ; (console/log "Replaced" added removed)
+    ; (console/log " Replaced " added removed)
     (dispatch [::tab-removed {:tabId removed}])
     (go (dispatch [::tab-created {:tab (<! (tabs/get-tab added))}]))
     app-state
@@ -201,11 +268,11 @@
       (when (and (:active tab)
                  (not= (:url old-tab)
                        (:url tab)))
-        (console/log "Tab URL changed while active")
+        (console/log " Tab URL changed while active ")
         (dispatch [:handle-deactivation old-tab])
         (dispatch [:handle-activation tab])
         ))
-    ; (console/log "Updated" tabId tab (get-in app-state (conj tab-data-path tabId)))
+    ; (console/log " Updated " tabId tab (get-in app-state (conj tab-data-path tabId)))
     app-state
     ))
 
@@ -226,8 +293,8 @@
                                     :title (:title tab)
                                     :favIconUrl (:favIconUrl tab)
                                     :timestamp (now))]
-      (console/log time track? "milliseconds spent at" url-key)
-      (console/log "Previous" url-time)
+      (console/log time track? " milliseconds spent at " url-key)
+      (console/log " Previous " url-time)
       (when track?
         (dispatch [:data-set :url-times (assoc url-times url-key new-time)]))
       app-state
@@ -239,8 +306,6 @@
 
 
 ;; TODO: Handle detached tabs, looks like we don't get an activate for them.
-
-
 
 
 
@@ -259,20 +324,22 @@
         (dispatch-sync [:initialize (:tabs window)])
         (dispatch-sync [:idle-state-change {:newState state}])
         (start-tracking)))
-  (dispatch-on-channel :log-content storage/on-changed)
-  (dispatch-on-channel ::tab-activated tabs/on-activated)
-  (dispatch-on-channel ::tab-created tabs/on-created)
-  (dispatch-on-channel ::tab-removed tabs/on-removed)
-  (dispatch-on-channel ::tab-updated tabs/on-updated)
-  (dispatch-on-channel ::tab-replaced tabs/on-replaced)
+  (on-channel runtime/on-suspend dispatch-sync :suspend)
+  (on-channel runtime/on-suspend-canceled dispatch-sync :log-content)
+  ; (on-channel storage/on-changed dispatch :log-content)
+  (on-channel tabs/on-activated dispatch ::tab-activated)
+  (on-channel tabs/on-created dispatch ::tab-created)
+  (on-channel tabs/on-removed dispatch ::tab-removed)
+  (on-channel tabs/on-updated dispatch ::tab-updated)
+  (on-channel tabs/on-replaced dispatch ::tab-replaced)
   (idle/set-detection-interval 60)
-  (dispatch-on-channel :idle-state-change idle/on-state-changed))
+  (on-channel idle/on-state-changed dispatch :idle-state-change))
 
 (defn init []
   (init-time-tracking)
   (go-loop
     [conns (runtime/on-connect)]
     (let [content (<! conns)]
-      (console/log "On background. Got message: " (<! content))
-      (>! content "Hello from background"))
+      (console/log " On background. Got message: " (<! content))
+      (>! content " Hello from background "))
     (recur conns)))
