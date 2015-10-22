@@ -284,19 +284,20 @@
   :track-time
   (fn [app-state [_ tab time]]
     (let [url-times (get-in app-state url-time-path)
-          url-key   (:url tab)
+          url       (or (:url tab) "")
+          url-key   (.hashCode url)
           url-time  (or (get url-times url-key)
                         {:url       (:url tab)
                          :time      0
                          :timestamp 0})
-          ;; Don't track two messages too close
-          track?    (and (not-empty url-key)
+          ;; Don't track two messages too close together
+          track?    (and (not= 0 url-key)
                          (< 100 (- (now) (:timestamp url-time))))
           new-time  (assoc url-time :time (+ (:time url-time) time)
                                     :title (:title tab)
                                     :favIconUrl (:favIconUrl tab)
                                     :timestamp (now))]
-      (console/log time track? " milliseconds spent at " url-key)
+      (console/log time track? " milliseconds spent at " url-key tab)
       (console/log " Previous " url-time)
       (when track?
         (dispatch [:data-set :url-times (assoc url-times url-key new-time)]))
