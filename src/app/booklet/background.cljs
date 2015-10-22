@@ -267,17 +267,23 @@
 (register-handler
   ::tab-updated
   (fn [app-state [_ {:keys [tabId tab]}]]
-    (let [old-tab (get-in app-state (conj tab-data-path tabId))]
+    (console/log "Updated " tabId tab (get-in app-state (conj tab-data-path tabId)))
+    (let [route   (conj tab-data-path tabId)
+          old-tab (get-in app-state route)]
       (when (and (:active tab)
                  (not= (:url old-tab)
                        (:url tab)))
-        (console/log " Tab URL changed while active ")
+        ; (console/log " Tab URL changed while active " tab old-tab)
         (dispatch [:handle-deactivation old-tab])
         (dispatch [:handle-activation tab])
-        ))
-    ; (console/log " Updated " tabId tab (get-in app-state (conj tab-data-path tabId)))
-    app-state
-    ))
+        )
+      ;; We can receive multiple tab-updated messages one after the other, before
+      ;; the dispatches above have had a change to handle activation/deactivation.
+      ;; Therefore, I change the title and URL right away, in case this gets
+      ;; triggered again and we compare it again (to avoid a double trigger of
+      ;; the URL change condition above).
+      (assoc-in app-state route (merge old-tab (select-keys tab [:title :url])))
+      )))
 
 
 (register-handler
