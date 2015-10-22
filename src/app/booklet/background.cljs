@@ -336,10 +336,4 @@
   (on-channel idle/on-state-changed dispatch :idle-state-change))
 
 (defn init []
-  (init-time-tracking)
-  (go-loop
-    [conns (runtime/on-connect)]
-    (let [content (<! conns)]
-      (console/log " On background. Got message: " (<! content))
-      (>! content " Hello from background "))
-    (recur conns)))
+  (init-time-tracking))
