@@ -110,8 +110,11 @@
       ;; De-activate every inactive tab
       (doseq [tab now-inactive]
         (dispatch [:handle-deactivation tab true (:time suspend-info)]))
+      (doseq [tab still-active]
+        (dispatch [:handle-activation tab (:start-time tab)]))
       (console/log "From suspend:" suspend-info)
       (console/log "Still active:" active-old-tabs)
+      (dispatch [:data-set :suspend-info] nil)
       app-state
       )
     ))
@@ -130,7 +133,7 @@
 
 (register-handler
   :handle-activation
-  (fn [app-state [_ tab]]
+  (fn [app-state [_ tab start-time]]
     (console/log "Handling activation" tab)
     (if tab
       (assoc-in app-state
@@ -138,7 +141,7 @@
                 (-> tab
                     select-tab-keys
                     (assoc :active true
-                           :start-time (now))))
+                           :start-time (or start-time (now)))))
       app-state)))
 
 
