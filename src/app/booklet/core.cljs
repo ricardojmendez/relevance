@@ -183,7 +183,7 @@
 
 (defn div-timetrack []
   (let [url-times  (subscribe [:data :url-times])
-        url-values (reaction (vals @url-times))
+        url-values (reaction (filter-tabs (vals @url-times)))
         to-list    (reaction (sort-by #(* -1 (:time %)) @url-values))]
     (fn []
       [:div
