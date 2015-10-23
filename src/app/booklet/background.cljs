@@ -4,6 +4,7 @@
             [booklet.utils :refer [on-channel from-transit to-transit]]
             [cognitect.transit :as transit]
             [khroma.log :as console]
+            [khroma.alarms :as alarms]
             [khroma.runtime :as runtime]
             [khroma.windows :as windows]
             [khroma.storage :as storage]
@@ -19,8 +20,10 @@
 ;;;; Functions
 ;;;;-------------------------------------
 
+(def window-alarm "window-alarm")
 
 (defn now [] (.now js/Date))
+
 
 (def relevant-tab-keys [:windowId :id :active :url :selected :start-time :title :favIconUrl])
 
@@ -28,6 +31,18 @@
 (def add-tab-times #(assoc % :start-time (if (:active %) (now) 0)))
 
 (def url-time-path [:data :url-times])
+
+
+(defn check-window-status
+  "Checks if we have any focused window, and compares it against the
+  window id for the active tab. If they do not match, it dispatches
+  a ::window-focus message"
+  [tab]
+  (go
+    (let [last-focused (<! (windows/get-last-focused {:populate false}))]
+      (when (and (:focused last-focused)
+                 (not= (:id last-focused) (:windowId tab)))
+        (dispatch [::window-focus {:windowId (:id last-focused)}])))))
 
 (defn process-tab
   "Filters a tab down to the relevant keys, and adds a start time which is
@@ -168,6 +183,15 @@
 
 
 (register-handler
+  ::on-alarm
+  (fn [app-state [_ {:keys [alarm]}]]
+    (when (= window-alarm (:name alarm))
+      (check-window-status (:active-tab app-state)))
+    app-state
+    ))
+
+
+(register-handler
   :suspend
   ;; The message itself is not relevant, we only care that we are being suspended
   (fn [app-state [_]]
@@ -245,12 +269,15 @@
   (fn [app-state [_ {:keys [windowId]}]]
     (console/trace "Current window" windowId)
     (let [active-tab (:active-tab app-state)
-          replacing? (not= windowId (:windowId active-tab))]
+          replacing? (not= windowId (:windowId active-tab))
+          is-none?   (= windowId windows/none)]
+      (when is-none?
+        (alarms/create window-alarm {:periodInMinutes 5}))
       (if replacing?
         (do
           (dispatch [:handle-deactivation active-tab])
-          ;; TODO: Add alarm when none
-          (when (not= windowId windows/none)
+          (when (not is-none?)
+            (alarms/clear window-alarm)
             (go (dispatch [:handle-activation
                            (first (<! (tabs/query {:active true :windowId windowId})))])))
           (assoc app-state :active-tab nil))
@@ -276,6 +303,7 @@
   (on-channel tabs/on-activated dispatch ::tab-activated)
   (on-channel tabs/on-updated dispatch ::tab-updated)
   (on-channel windows/on-focus-changed dispatch ::window-focus)
+  (on-channel alarms/on-alarm dispatch-sync ::on-alarm)
   (idle/set-detection-interval 60)
   (on-channel idle/on-state-changed dispatch :idle-state-change))
 
