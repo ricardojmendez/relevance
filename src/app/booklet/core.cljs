@@ -257,7 +257,6 @@
 
 
 (defn init []
-  (console/log "Initialized booklet.core")
   (dispatch-sync [:initialize])
   (on-channel storage/on-changed dispatch ::storage-changed)
   (idle/set-detection-interval 60)
