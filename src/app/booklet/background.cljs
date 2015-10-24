@@ -15,10 +15,10 @@
 
 
 
+;;;;-------------------------------------
+;;;; Settings
+;;;;-------------------------------------
 
-;;;;-------------------------------------
-;;;; Functions
-;;;;-------------------------------------
 
 (def window-alarm "window-alarm")
 
@@ -28,9 +28,11 @@
 (def relevant-tab-keys [:windowId :id :active :url :selected :start-time :title :favIconUrl])
 
 (def select-tab-keys #(select-keys % relevant-tab-keys))
-(def add-tab-times #(assoc % :start-time (if (:active %) (now) 0)))
-
 (def url-time-path [:data :url-times])
+
+;;;;-------------------------------------
+;;;; Functions
+;;;;-------------------------------------
 
 
 (defn check-window-status
@@ -44,32 +46,21 @@
                  (not= (:id last-focused) (:windowId tab)))
         (dispatch [::window-focus {:windowId (:id last-focused)}])))))
 
-(defn process-tab
-  "Filters a tab down to the relevant keys, and adds a start time which is
-  now if the tab is active, or 0 otherwise.
 
-  Keeping the time on the tab itself, since we may end up with multiple tabs
-  open to the same URL. Might make sense to track it all in one, using always
-  the last one... but for now I'm assuming that if you have it active in two
-  tabs, it's doubly important (you found it twice and forgot about it)."
-  [tab]
-  (->
-    tab
-    select-tab-keys
-    add-tab-times))
-
-
-(defn tab-list-to-map
-  [tabs]
-  (reduce #(assoc % (:id %2) %2) {} tabs))
-
-(defn process-tabs
-  "Take the tabs we have, filter them down and return them grouped by id."
-  [tabs]
-  (->>
-    tabs
-    (map process-tab)
-    tab-list-to-map))
+(defn hook-to-channels
+  "Hooks up to the various events we'll need to set up to.
+  We won't call it until after the initial import is done, so that we
+  don't end up receiving events when we don't yet have the environment
+  set up to handle them."
+  []
+  (on-channel alarms/on-alarm dispatch-sync ::on-alarm)
+  (on-channel runtime/on-suspend dispatch-sync :suspend)
+  (on-channel runtime/on-suspend-canceled dispatch-sync :log-content)
+  (on-channel tabs/on-activated dispatch ::tab-activated)
+  (on-channel tabs/on-updated dispatch ::tab-updated)
+  (on-channel windows/on-focus-changed dispatch ::window-focus)
+  (idle/set-detection-interval 60)
+  (on-channel idle/on-state-changed dispatch :idle-state-change))
 
 
 ;;;;-------------------------------------
@@ -80,8 +71,12 @@
 (register-handler
   ::initialize
   (fn [_]
-    (go (dispatch [:data-import (:data (<! (storage/get)))]))
-    {:app-state {}}))
+    (go
+      (dispatch [:data-import (:data (<! (storage/get))) true])
+      (dispatch [::window-focus {:windowId (:windowId (<! (windows/get-last-focused {:populate false})))}])
+      (dispatch [:idle-state-change {:newState (<! (idle/query-state 30))}]))
+    {:app-state    {}
+     :hookup-done? false}))
 
 
 ;; :data-import currently gets dispatched from both booklet.core
@@ -100,9 +95,13 @@
         (dispatch [:data-set key item]))
       ;; Once we've dispatched these, let's dispatch evaluate the state
       (dispatch [:data-import-done])
+      ;; We should only hook to the channels once.
+      (when (not (:hookup-done? app-state))
+        (hook-to-channels))
       (-> app-state
           (assoc-in [:ui-state :section] :time-track)
           (assoc-in [:app-state :import] nil)
+          (assoc :hookup-done? true)
           (assoc :data new-data))
       )))
 
@@ -116,11 +115,10 @@
           is-same?     (and (= (:id old-tab) (:id current-tab))
                             (= (:url old-tab) (:url current-tab))
                             (= (:windowId old-tab) (:windowId current-tab)))]
-      ;; De-activate every inactive tab
+      (console/trace "From suspend:" is-same? suspend-info)
       (if is-same?
         (dispatch [:handle-deactivation old-tab (:time suspend-info)])
         (dispatch [:handle-activation old-tab (:start-time old-tab)]))
-      (console/trace "From suspend:" is-same? suspend-info)
       (dispatch [:data-set :suspend-info] nil)
       app-state
       )
@@ -299,20 +297,8 @@
 
 
 (defn init-time-tracking []
-  (go (let [state  (<! (idle/query-state 30))
-            window (<! (windows/get-last-focused {:populate false}))]
-        (dispatch-sync [::initialize])
-        (dispatch-sync [::window-focus {:windowId (:id window)}])
-        (dispatch-sync [:idle-state-change {:newState state}])
-        ))
-  (on-channel runtime/on-suspend dispatch-sync :suspend)
-  (on-channel runtime/on-suspend-canceled dispatch-sync :log-content)
-  (on-channel tabs/on-activated dispatch ::tab-activated)
-  (on-channel tabs/on-updated dispatch ::tab-updated)
-  (on-channel windows/on-focus-changed dispatch ::window-focus)
-  (on-channel alarms/on-alarm dispatch-sync ::on-alarm)
-  (idle/set-detection-interval 60)
-  (on-channel idle/on-state-changed dispatch :idle-state-change))
+  (dispatch-sync [::initialize])
+  )
 
 (defn init []
   (init-time-tracking))
