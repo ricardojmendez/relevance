@@ -117,8 +117,8 @@
                             (= (:windowId old-tab) (:windowId current-tab)))]
       (console/trace "From suspend:" is-same? suspend-info)
       (if is-same?
-        (dispatch [:handle-deactivation old-tab (:time suspend-info)])
-        (dispatch [:handle-activation old-tab (:start-time old-tab)]))
+        (dispatch [:handle-activation old-tab (:start-time old-tab)])
+        (dispatch [:handle-deactivation old-tab (:time suspend-info)]))
       (dispatch [:data-set :suspend-info] nil)
       app-state
       )
