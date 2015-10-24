@@ -59,9 +59,10 @@
 
 
 (register-handler
-  :initialize
+  ::initialize
   (fn [_]
-    (go (dispatch [:data-import (:data (<! (storage/get)))]))
+    ;; Fake a ::storage-changed message to load the data from storage
+    (go (dispatch [::storage-changed {:changes {:data {:newValue (:data (<! (storage/get)))}}}]))
     {:app-state {}
      :ui-state  {:section :time-track}}))
 
@@ -257,7 +258,7 @@
 
 
 (defn init []
-  (dispatch-sync [:initialize])
+  (dispatch-sync [::initialize])
   (on-channel storage/on-changed dispatch ::storage-changed)
   (idle/set-detection-interval 60)
   (mount-components))

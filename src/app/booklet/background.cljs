@@ -77,6 +77,13 @@
 ;;;;-------------------------------------
 
 
+(register-handler
+  ::initialize
+  (fn [_]
+    (go (dispatch [:data-import (:data (<! (storage/get)))]))
+    {:app-state {}}))
+
+
 ;; :data-import currently gets dispatched from both booklet.core
 ;; and booklet.background, not entirely happy with that. Needs
 ;; further clean up
@@ -146,8 +153,8 @@
 (register-handler
   :handle-deactivation
   (fn
-    ; We get two parameters: the tab, and optionally the time at which it
-    ; was deactivated (which defaults to now)
+    ;; We get two parameters: the tab, and optionally the time at which it
+    ;; was deactivated (which defaults to now)
     [app-state [_ tab end-time]]
     (console/trace " Deactivating " tab)
     (when (or (:active tab)
@@ -294,7 +301,7 @@
 (defn init-time-tracking []
   (go (let [state  (<! (idle/query-state 30))
             window (<! (windows/get-last-focused {:populate false}))]
-        (dispatch-sync [:initialize])
+        (dispatch-sync [::initialize])
         (dispatch-sync [::window-focus {:windowId (:id window)}])
         (dispatch-sync [:idle-state-change {:newState state}])
         ))
