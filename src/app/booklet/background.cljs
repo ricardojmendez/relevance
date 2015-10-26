@@ -10,7 +10,9 @@
             [khroma.storage :as storage]
             [khroma.idle :as idle]
             [khroma.tabs :as tabs]
-            [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]])
+            [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
+            [khroma.extension :as ext]
+            [khroma.browser-action :as browser])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 
@@ -300,5 +302,21 @@
   (dispatch-sync [::initialize])
   )
 
+(defn init-click-handling []
+  (go-loop
+    [channel (browser/on-clicked)]
+    (when (<! channel)
+      (let [ext-url (str (ext/get-url "/") "index.html")
+            ;; We could just get the window-id from the tab, but that still
+            ;; requires us to make an extra call for the other tabs
+            window  (<! (windows/get-current))
+            our-tab (first (filter #(= ext-url (:url %)) (:tabs window)))]
+        (if our-tab
+          (tabs/activate (:id our-tab))
+          (tabs/create {:url ext-url}))))
+    (recur channel)
+    ))
+
 (defn init []
-  (init-time-tracking))
+  (init-time-tracking)
+  (init-click-handling))
