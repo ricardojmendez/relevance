@@ -2,7 +2,6 @@
   (:require [clojure.set :refer [difference]]
             [cljs.core.async :refer [>! <!]]
             [booklet.utils :refer [on-channel from-transit to-transit]]
-            [cognitect.transit :as transit]
             [khroma.log :as console]
             [khroma.alarms :as alarms]
             [khroma.runtime :as runtime]
@@ -300,6 +299,12 @@
 
 (defn init-time-tracking []
   (dispatch-sync [::initialize])
+  (go-loop
+    [conn (runtime/on-connect)]
+    (let [content (<! conn)]
+      (console/log "--> Background received" (<! content))
+      (>! content :background-ack)
+      (recur conn)))
   )
 
 (defn init-click-handling []

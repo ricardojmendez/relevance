@@ -23,6 +23,13 @@
     ],
     "persistent": false
   },
+  "content_scripts": [
+    {
+      "matches": ["https://*.startpage.com/*", "https://duckduckgo.com/*"],
+      "run_at": "document_end",
+      "js": ["booklet.js", "content-init.js"]
+    }
+  ],
   "manifest_version": 2
 }
 
