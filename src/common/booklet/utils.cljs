@@ -1,7 +1,6 @@
 (ns booklet.utils
   (:require [cljs.core.async :refer [<!]]
-            [cognitect.transit :as transit]
-            [reagent.core :as reagent])
+            [cognitect.transit :as transit])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 
@@ -23,7 +22,3 @@
 (defn from-transit
   [transit-data]
   (transit/read (transit/reader :json) transit-data))
-
-(def initial-focus-wrapper
-  (with-meta identity
-             {:component-did-mount #(.focus (reagent/dom-node %))}))
