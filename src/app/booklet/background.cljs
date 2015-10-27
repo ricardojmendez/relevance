@@ -251,7 +251,7 @@
   (fn [app-state [_ tab time]]
     (let [url-times (or (get-in app-state url-time-path) {})
           url       (or (:url tab) "")
-          url-key   (.hashCode url)
+          url-key   (hash-string url)
           url-time  (or (get url-times url-key)
                         {:url       (:url tab)
                          :time      0

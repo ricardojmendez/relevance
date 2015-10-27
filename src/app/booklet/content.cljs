@@ -12,7 +12,7 @@
   [database node]
   (let [parent    (.-parentNode node)
         href      (.-href parent)
-        id        (.hashCode href)
+        id        (hash-string href)
         data      (get database id)
         time      (:time data)
         root-item (-> parent .-parentNode .-parentNode .-parentNode)  ; Yeah, hacky as fuck
