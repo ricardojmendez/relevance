@@ -2,13 +2,14 @@
   (:require [clojure.set :refer [difference]]
             [cljs.core.async :refer [>! <!]]
             [booklet.utils :refer [on-channel from-transit to-transit key-from-url]]
-            [khroma.log :as console]
             [khroma.alarms :as alarms]
+            [khroma.context-menus :as menus]
+            [khroma.idle :as idle]
+            [khroma.log :as console]
+            [khroma.storage :as storage]
+            [khroma.tabs :as tabs]
             [khroma.runtime :as runtime]
             [khroma.windows :as windows]
-            [khroma.storage :as storage]
-            [khroma.idle :as idle]
-            [khroma.tabs :as tabs]
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
             [khroma.extension :as ext]
             [khroma.browser-action :as browser])
@@ -55,13 +56,37 @@
   set up to handle them."
   []
   (on-channel alarms/on-alarm dispatch-sync ::on-alarm)
+  (on-channel browser/on-clicked dispatch-sync ::on-clicked-button)
   (on-channel runtime/on-suspend dispatch-sync :suspend)
   (on-channel runtime/on-suspend-canceled dispatch-sync :log-content)
   (on-channel tabs/on-activated dispatch ::tab-activated)
   (on-channel tabs/on-updated dispatch ::tab-updated)
   (on-channel windows/on-focus-changed dispatch ::window-focus)
+  (on-channel menus/on-clicked dispatch ::on-clicked-menu)
   (idle/set-detection-interval 60)
   (on-channel idle/on-state-changed dispatch :idle-state-change))
+
+(defn open-results-tab []
+  (go (let [ext-url (str (ext/get-url "/") "index.html")
+            ;; We could just get the window-id from the tab, but that still
+            ;; requires us to make an extra call for the other tabs
+            window  (<! (windows/get-current))
+            our-tab (first (filter #(= ext-url (:url %)) (:tabs window)))]
+        (if our-tab
+          (tabs/activate (:id our-tab))
+          (tabs/create {:url ext-url})))))
+
+(defn sort-tabs! [window-id url-times]
+  (go
+    (let [tabs (->> (:tabs (<! (windows/get window-id)))
+                    (map #(assoc % :time (or (:time (get url-times (key-from-url (:url %))))
+                                             (- 2000 (:index %)))))
+                    (sort-by #(* -1 (:time %)))
+                    (map-indexed #(hash-map :index %1
+                                            :id (:id %2))))]
+      (doseq [tab tabs]
+        (tabs/move (:id tab) {:index (:index tab)}))
+      )))
 
 
 ;;;;-------------------------------------
@@ -196,6 +221,34 @@
     app-state
     ))
 
+(register-handler
+  ::on-clicked-button
+  (fn [app-state [_ {:keys [tab]}]]
+    (dispatch [:on-relevance-sort-tabs tab])
+    app-state
+    ))
+
+(register-handler
+  ::on-clicked-menu
+  (fn [app-state [_ {:keys [info tab]}]]
+    (dispatch [(keyword (:menuItemId info)) tab])
+    app-state
+    ))
+
+
+(register-handler
+  :on-relevance-show-data
+  (fn [app-state [_]]
+    (open-results-tab)
+    app-state))
+
+
+(register-handler
+  :on-relevance-sort-tabs
+  (fn [app-state [_ tab]]
+    (sort-tabs! (:windowId tab) (get-in app-state url-time-path))
+    app-state))
+
 
 (register-handler
   :suspend
@@ -307,23 +360,13 @@
       (recur connections)))
   )
 
-(defn browser-click-handling []
-  (go-loop
-    [channel (browser/on-clicked)]
-    (when (<! channel)
-      (let [ext-url (str (ext/get-url "/") "index.html")
-            ;; We could just get the window-id from the tab, but that still
-            ;; requires us to make an extra call for the other tabs
-            window  (<! (windows/get-current))
-            our-tab (first (filter #(= ext-url (:url %)) (:tabs window)))]
-        (if our-tab
-          (tabs/activate (:id our-tab))
-          (tabs/create {:url ext-url}))))
-    (recur channel)
-    ))
+
 
 (defn ^:export main []
-  (time-tracking)
-  (browser-click-handling))
+  (menus/remove-all)
+  (menus/create {:id       :on-relevance-show-data
+                 :title    "Show data"
+                 :contexts ["browser_action"]})
+  (time-tracking))
 
 (main)
