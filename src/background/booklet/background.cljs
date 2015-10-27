@@ -278,7 +278,7 @@
           replacing? (not= windowId (:windowId active-tab))
           is-none?   (= windowId windows/none)]
       (when is-none?
-        (alarms/create window-alarm {:periodInMinutes 5}))
+        (alarms/create window-alarm {:periodInMinutes 1}))
       (if replacing?
         (do
           (dispatch [:handle-deactivation active-tab])
