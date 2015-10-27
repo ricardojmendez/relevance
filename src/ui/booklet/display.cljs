@@ -1,6 +1,5 @@
 (ns booklet.display
-  (:require [ajax.core :refer [GET POST PUT]]
-            [booklet.utils :refer [on-channel from-transit]]
+  (:require [booklet.utils :refer [on-channel from-transit]]
             [cljs.core.async :refer [>! <!]]
             [cljs.core :refer [random-uuid]]
             [cljsjs.react-bootstrap]

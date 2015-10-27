@@ -4,7 +4,7 @@
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.145"]
                  [org.clojure/core.async "0.1.346.0-17112a-alpha"]
-                 [cljs-ajax "0.5.0"]
+                 [com.cognitect/transit-cljs "0.8.225"]
                  [cljsjs/react-bootstrap "0.25.2-0" :exclusions [org.webjars.bower/jquery]]
                  [khroma "0.2.0-SNAPSHOT"]
                  [prismatic/dommy "1.1.0"]
