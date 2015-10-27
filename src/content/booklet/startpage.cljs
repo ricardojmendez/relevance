@@ -1,5 +1,5 @@
 (ns booklet.startpage
-  (:require [booklet.utils :refer [from-transit]]
+  (:require [booklet.utils :refer [from-transit key-from-url]]
             [dommy.core :refer-macros [sel sel1]]
             [khroma.runtime :as runtime]
             [khroma.log :as console]
@@ -12,7 +12,7 @@
   [database node]
   (let [parent    (.-parentNode node)
         href      (.-href parent)
-        id        (hash-string href)
+        id        (key-from-url href)
         data      (get database id)
         time      (:time data)
         root-item (-> parent .-parentNode .-parentNode .-parentNode)  ; Yeah, hacky as fuck

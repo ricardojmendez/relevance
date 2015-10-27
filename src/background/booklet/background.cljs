@@ -1,7 +1,7 @@
 (ns booklet.background
   (:require [clojure.set :refer [difference]]
             [cljs.core.async :refer [>! <!]]
-            [booklet.utils :refer [on-channel from-transit to-transit]]
+            [booklet.utils :refer [on-channel from-transit to-transit key-from-url]]
             [khroma.log :as console]
             [khroma.alarms :as alarms]
             [khroma.runtime :as runtime]
@@ -251,7 +251,7 @@
   (fn [app-state [_ tab time]]
     (let [url-times (or (get-in app-state url-time-path) {})
           url       (or (:url tab) "")
-          url-key   (hash-string url)
+          url-key   (key-from-url url)
           url-time  (or (get url-times url-key)
                         {:url       (:url tab)
                          :time      0

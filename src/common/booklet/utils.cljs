@@ -11,9 +11,7 @@
   (go-loop
     [channel (chan-fn)]
     (dispatch-fn [msg (<! channel)])
-    (recur channel)
-    ))
-
+    (recur channel)))
 
 (defn to-transit
   [data]
@@ -22,3 +20,12 @@
 (defn from-transit
   [transit-data]
   (transit/read (transit/reader :json) transit-data))
+
+(defn key-from-url
+  "Shortens a URL to remove anchor and protocol, and returns an integer based on
+  the result."
+  [url]
+  (let [element   (.createElement js/document "a")
+        _         (aset element "href" url)
+        shortened (str (.-host element) (.-pathname element) (.-search element))]
+    (hash-string shortened)))
