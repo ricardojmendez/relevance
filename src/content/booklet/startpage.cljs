@@ -1,4 +1,4 @@
-(ns booklet.content
+(ns booklet.startpage
   (:require [booklet.utils :refer [from-transit]]
             [dommy.core :refer-macros [sel sel1] :as dommy]
             [khroma.runtime :as runtime]

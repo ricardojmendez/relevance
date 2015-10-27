@@ -27,7 +27,7 @@
                {:source-paths ["src/content" "src/common"]
                 :compiler     {:output-to     "target/unpacked/content.js"
                                :output-dir    "target/js/content"
-                               :main          "booklet.content"
+                               :main          "booklet.startpage"
                                :optimizations :whitespace
                                :pretty-print  true}}
                :ui
