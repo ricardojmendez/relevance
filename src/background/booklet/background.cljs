@@ -322,6 +322,8 @@
     (recur channel)
     ))
 
-(defn init []
+(defn ^:export main []
   (init-time-tracking)
   (init-click-handling))
+
+(main)

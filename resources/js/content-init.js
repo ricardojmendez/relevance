@@ -1,1 +1,0 @@
-booklet.content.init();

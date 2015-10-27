@@ -1,5 +1,5 @@
 (ns booklet.content
-  (:require [booklet.utils :refer [on-channel from-transit to-transit]]
+  (:require [booklet.utils :refer [from-transit]]
             [dommy.core :refer-macros [sel sel1] :as dommy]
             [khroma.runtime :as runtime]
             [khroma.log :as console]
@@ -44,10 +44,12 @@
 
       )))
 
-(defn ^:export init []
+(defn ^:export main []
   (console/log "Init on content script!")
   (do-transformations!)
   (let [bg (runtime/connect)]
     (go
       (>! bg :content-initialized)
       (console/log "<-- Background replied" (<! bg)))))
+
+(main)

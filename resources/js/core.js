@@ -1,1 +1,0 @@
-booklet.core.init();

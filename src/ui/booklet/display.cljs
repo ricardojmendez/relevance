@@ -1,4 +1,4 @@
-(ns booklet.core
+(ns booklet.display
   (:require [ajax.core :refer [GET POST PUT]]
             [booklet.utils :refer [on-channel from-transit]]
             [cljs.core.async :refer [>! <!]]
@@ -68,14 +68,6 @@
 
 
 (register-handler
-  :log-content
-  (fn [app-state [_ content]]
-    (console/log "Log event:" content)
-    app-state
-    ))
-
-
-(register-handler
   :modal-info-set
   (fn [app-state [_ info]]
     (assoc-in app-state [:ui-state :modal-info] info)))
@@ -101,7 +93,6 @@
 (def ModalBody (reagent/adapt-react-class js/ReactBootstrap.ModalBody))
 (def ModalFooter (reagent/adapt-react-class js/ReactBootstrap.ModalFooter))
 (def ModalHeader (reagent/adapt-react-class js/ReactBootstrap.ModalHeader))
-
 
 
 ;;;;----------------------------
@@ -257,8 +248,10 @@
   (reagent/render-component [main-section] (.getElementById js/document "main-section")))
 
 
-(defn init []
+(defn ^:export main []
   (dispatch-sync [::initialize])
   (on-channel storage/on-changed dispatch ::storage-changed)
   (idle/set-detection-interval 60)
   (mount-components))
+
+(main)
