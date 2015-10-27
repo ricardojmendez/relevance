@@ -1,13 +1,6 @@
 (ns booklet.shared-handlers
-  (:require [booklet.utils :refer [on-channel from-transit]]
-            [cljs.core.async :refer [>! <!]]
-            [cljs.core :refer [random-uuid]]
-            [cljsjs.react-bootstrap]
-            [khroma.log :as console]
-            [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]])
-  (:require-macros [cljs.core :refer [goog-define]]
-                   [cljs.core.async.macros :refer [go go-loop]]
-                   [reagent.ratom :refer [reaction]]))
+  (:require [khroma.log :as console]
+            [re-frame.core :refer [register-handler]]))
 
 
 (register-handler

@@ -26,7 +26,7 @@
 (defn now [] (.now js/Date))
 
 
-(def relevant-tab-keys [:windowId :id :active :url :selected :start-time :title :favIconUrl])
+(def relevant-tab-keys [:windowId :id :active :url :start-time :title :favIconUrl])
 
 (def select-tab-keys #(select-keys % relevant-tab-keys))
 (def url-time-path [:data :url-times])
@@ -297,17 +297,17 @@
 ;;;;-------------------------------------
 
 
-(defn init-time-tracking []
+(defn time-tracking []
   (dispatch-sync [::initialize])
   (go-loop
-    [conn (runtime/on-connect)]
-    (let [content (<! conn)]
+    [connections (runtime/on-connect)]
+    (let [content (<! connections)]
       (console/log "--> Background received" (<! content))
       (>! content :background-ack)
-      (recur conn)))
+      (recur connections)))
   )
 
-(defn init-click-handling []
+(defn browser-click-handling []
   (go-loop
     [channel (browser/on-clicked)]
     (when (<! channel)
@@ -323,7 +323,7 @@
     ))
 
 (defn ^:export main []
-  (init-time-tracking)
-  (init-click-handling))
+  (time-tracking)
+  (browser-click-handling))
 
 (main)

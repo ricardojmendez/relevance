@@ -1,6 +1,6 @@
 (ns booklet.startpage
   (:require [booklet.utils :refer [from-transit]]
-            [dommy.core :refer-macros [sel sel1] :as dommy]
+            [dommy.core :refer-macros [sel sel1]]
             [khroma.runtime :as runtime]
             [khroma.log :as console]
             [cljs.core.async :refer [>! <!]]
@@ -30,7 +30,6 @@
           base  (sel1 :.web_regular_results)]
       (doseq [node nodes]
         (transform-result-node! (:url-times data) node))
-      (console/log "Base" base)
       (doall
         (->>
           nodes
