@@ -22,8 +22,7 @@
 
 (defn from-transit
   [transit-data]
-  (transit/read (transit/reader :json) transit-data)
-  )
+  (transit/read (transit/reader :json) transit-data))
 
 (def initial-focus-wrapper
   (with-meta identity
