@@ -115,7 +115,7 @@
           [:span {:class "icon-bar"}]
           [:span {:class "icon-bar"}]
           [:span {:class "icon-bar"}]]
-         [:a {:class "navbar-brand" :href "http://numergent.com" :target "_new"} "Booklet"]]
+         [:a {:class "navbar-brand" :href "http://numergent.com" :target "_new"} "Relevance"]]
         [:div {:class "collapse navbar-collapse", :id "bs-example-navbar-collapse-1"}
          [:ul {:class "nav navbar-nav"}
           [navbar-item "Times" :time-track @section]
