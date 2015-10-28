@@ -1,5 +1,5 @@
 (ns booklet.startpage
-  (:require [booklet.utils :refer [from-transit key-from-url]]
+  (:require [booklet.utils :refer [from-transit key-from-url time-display]]
             [dommy.core :refer-macros [sel sel1] :as dommy]
             [khroma.runtime :as runtime]
             [khroma.log :as console]
@@ -7,18 +7,6 @@
             [khroma.storage :as storage])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
-
-(defn time-display
-  "Returns a display string for a number of milliseconds"
-  [millis]
-  (let [seconds (quot millis 1000)]
-    (cond
-      (< seconds 1) "< 1s"
-      (< seconds 60) (str seconds "s")
-      (< seconds 3600) (str (quot seconds 60) "min " (rem seconds 60) "s")
-      (< seconds 86400) (str (quot seconds 3600) "h " (quot (rem seconds 3600) 60) "min")
-      :else (str (quot seconds 86400) "d " (quot (rem seconds 86400) 3600) "h"))
-    ))
 
 (defn create-node [tag text color]
   (-> (dommy/create-element tag)

@@ -1,5 +1,5 @@
 (ns booklet.display
-  (:require [booklet.utils :refer [on-channel from-transit]]
+  (:require [booklet.utils :refer [on-channel from-transit time-display]]
             [cljs.core.async :refer [>! <!]]
             [cljs.core :refer [random-uuid]]
             [cljsjs.react-bootstrap]
@@ -151,7 +151,7 @@
                   :on-click (:action @modal-info)} (:action-label @modal-info)]
         ]])))
 
-(defn list-tabs [tabs disp-key]
+(defn list-urls [tabs]
   (->>
     tabs
     (sort-by :index)
@@ -161,7 +161,7 @@
               favicon (:favIconUrl tab)]
           ^{:key i}
           [:tr
-           [:td {:class "col-sm-1"} (when disp-key (disp-key tab))]
+           [:td {:class "col-sm-1"} (time-display (:time tab))]
            [:td {:class "col-sm-6"} [:a
                                      {:href url :target "_blank"}
                                      (if favicon
@@ -186,7 +186,7 @@
           [:th "Title"]
           [:th "URL"]]]
         [:tbody
-         (list-tabs @to-list :time)]
+         (list-urls @to-list)]
         ]])
     ))
 
