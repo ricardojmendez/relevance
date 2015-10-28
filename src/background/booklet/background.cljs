@@ -366,7 +366,7 @@
 (defn ^:export main []
   (menus/remove-all)
   (menus/create {:id       :on-relevance-show-data
-                 :title    "Show data"
+                 :title    "Show Relevance data"
                  :contexts ["browser_action"]})
   (time-tracking))
 
