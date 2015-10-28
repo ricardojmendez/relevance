@@ -76,6 +76,7 @@
           (tabs/activate (:id our-tab))
           (tabs/create {:url ext-url})))))
 
+
 (defn sort-tabs! [window-id url-times]
   (go
     (let [tabs (->> (:tabs (<! (windows/get window-id)))
