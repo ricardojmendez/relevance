@@ -1,12 +1,17 @@
 (ns booklet.startpage
   (:require [booklet.utils :refer [from-transit key-from-url]]
-            [dommy.core :refer-macros [sel sel1]]
+            [dommy.core :refer-macros [sel sel1] :as dommy]
             [khroma.runtime :as runtime]
             [khroma.log :as console]
             [cljs.core.async :refer [>! <!]]
             [khroma.storage :as storage])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
+
+(defn create-node [tag color text]
+  (-> (dommy/create-element tag)
+      (dommy/set-style! :color color)
+      (dommy/set-text! text)))
 
 (defn transform-result-node!
   [database node]
@@ -20,8 +25,11 @@
     (aset node "rootItem" root-item)
     (aset root-item "total-time" time)
     (when data
-      (aset node "textContent"
-            (str (aget node "textContent") " [time viewed: " time " ms]")))))
+      (doto node
+        (dommy/append! (create-node :span "rgb(80, 99, 152)" " [time viewed: "))
+        (dommy/append! (create-node :span "rgb(140, 101, 153)" (str time " ms")))
+        (dommy/append! (create-node :span "rgb(80, 99, 152)" "]")))
+      )))
 
 (defn do-transformations! []
   (go
