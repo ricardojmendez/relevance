@@ -1,2 +1,0 @@
-
-booklet.background.init();
