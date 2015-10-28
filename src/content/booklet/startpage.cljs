@@ -8,10 +8,22 @@
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 
-(defn create-node [tag color text]
+(defn time-display
+  "Returns a display string for a number of milliseconds"
+  [millis]
+  (let [seconds (quot millis 1000)]
+    (cond
+      (< seconds 1) "< 1s"
+      (< seconds 60) (str seconds "s")
+      (< seconds 3600) (str (quot seconds 60) "min " (rem seconds 60) "s")
+      (< seconds 86400) (str (quot seconds 3600) "h " (quot (rem seconds 3600) 60) "min")
+      :else (str (quot seconds 86400) "d " (quot (rem seconds 86400) 3600) "h"))
+    ))
+
+(defn create-node [tag text color]
   (-> (dommy/create-element tag)
-      (dommy/set-style! :color color)
-      (dommy/set-text! text)))
+      (dommy/set-text! text)
+      (dommy/set-style! :color color)))
 
 (defn transform-result-node!
   [database node]
@@ -25,10 +37,14 @@
     (aset node "rootItem" root-item)
     (aset root-item "total-time" time)
     (when data
-      (doto node
-        (dommy/append! (create-node :span "rgb(80, 99, 152)" " [time viewed: "))
-        (dommy/append! (create-node :span "rgb(140, 101, 153)" (str time " ms")))
-        (dommy/append! (create-node :span "rgb(80, 99, 152)" "]")))
+      (dommy/append!
+        node
+        (doto (dommy/create-element :span)
+          (dommy/set-style! :font-size "90%")
+          (dommy/append! (create-node :span " [time viewed: " "rgb(80, 99, 152)"))
+          (dommy/append! (create-node :span (time-display time) "rgb(140, 101, 153)"))
+          (dommy/append! (create-node :span "]" "rgb(80, 99, 152)"))
+          ))
       )))
 
 (defn do-transformations! []
