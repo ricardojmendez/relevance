@@ -98,7 +98,7 @@
   ::initialize
   (fn [_]
     (go
-      (dispatch [:data-import (<! (data/get))])
+      (dispatch [:data-load (<! (data/get))])
       (dispatch [::window-focus {:windowId (:id (<! (windows/get-last-focused {:populate false})))}])
       (dispatch [:idle-state-change {:newState (<! (idle/query-state 30))}]))
     {:app-state    {}
@@ -106,7 +106,7 @@
 
 
 (register-handler
-  :data-import
+  :data-load
   (fn [app-state [_ new-data]]
     (console/trace "New data on import" new-data)
     ;; Create a new id if we don't have one
@@ -129,7 +129,6 @@
         (dispatch [:handle-deactivation old-tab (:time suspend-info)])))
     (-> app-state
         (assoc-in [:ui-state :section] :time-track)
-        (assoc-in [:app-state :import] nil)
         (assoc :hookup-done? true)
         (assoc :data (assoc new-data :suspend-info nil)))))
 
