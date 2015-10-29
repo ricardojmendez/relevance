@@ -1,12 +1,11 @@
 (ns booklet.background
-  (:require [clojure.set :refer [difference]]
-            [cljs.core.async :refer [>! <!]]
-            [booklet.utils :refer [on-channel from-transit to-transit key-from-url]]
+  (:require [cljs.core.async :refer [>! <!]]
+            [booklet.data :as data]
+            [booklet.utils :refer [on-channel key-from-url]]
             [khroma.alarms :as alarms]
             [khroma.context-menus :as menus]
             [khroma.idle :as idle]
             [khroma.log :as console]
-            [khroma.storage :as storage]
             [khroma.tabs :as tabs]
             [khroma.runtime :as runtime]
             [khroma.windows :as windows]
@@ -99,65 +98,47 @@
   ::initialize
   (fn [_]
     (go
-      (dispatch [:data-import (:data (<! (storage/get))) true])
+      (dispatch [:data-import (<! (data/get))])
       (dispatch [::window-focus {:windowId (:id (<! (windows/get-last-focused {:populate false})))}])
       (dispatch [:idle-state-change {:newState (<! (idle/query-state 30))}]))
     {:app-state    {}
      :hookup-done? false}))
 
 
-;; :data-import currently gets dispatched from both booklet.core
-;; and booklet.background, not entirely happy with that. Needs
-;; further clean up
 (register-handler
   :data-import
-  (fn [app-state [_ transit-data]]
-    (let [new-data (from-transit transit-data)]
-      (console/trace "New data on import" new-data)
-      ;; Create a new id if we don't have one
-      (when (empty? (:instance-id new-data))
-        (dispatch [:data-set :instance-id (.-uuid (random-uuid))]))
-      ;; Dispatch instead of just doing an assoc so that it's also saved
-      (doseq [[key item] new-data]
-        (dispatch [:data-set key item]))
-      ;; Once we've dispatched these, let's dispatch evaluate the state
-      (dispatch [:data-import-done])
-      ;; We should only hook to the channels once.
-      (when (not (:hookup-done? app-state))
-        (hook-to-channels))
-      (-> app-state
-          (assoc-in [:ui-state :section] :time-track)
-          (assoc-in [:app-state :import] nil)
-          (assoc :hookup-done? true)
-          (assoc :data new-data))
-      )))
-
-
-(register-handler
-  :data-import-done
-  (fn [app-state [_]]
-    (let [suspend-info (get-in app-state [:data :suspend-info])
+  (fn [app-state [_ new-data]]
+    (console/trace "New data on import" new-data)
+    ;; Create a new id if we don't have one
+    (when (empty? (:instance-id new-data))
+      (dispatch [:data-set :instance-id (.-uuid (random-uuid))]))
+    ;; Save the data we just imported
+    (data/set new-data)
+    ;; We should only hook to the channels once.
+    (when (not (:hookup-done? app-state))
+      (hook-to-channels))
+    ;; Process the suspend info
+    (let [suspend-info (:suspend-info new-data)
           old-tab      (:active-tab suspend-info)
           current-tab  (:active-tab app-state)
           is-same?     (and (= (:id old-tab) (:id current-tab))
                             (= (:url old-tab) (:url current-tab))
                             (= (:windowId old-tab) (:windowId current-tab)))]
-      (console/trace "From suspend:" is-same? suspend-info)
       (if is-same?
         (dispatch [:handle-activation old-tab (:start-time old-tab)])
-        (dispatch [:handle-deactivation old-tab (:time suspend-info)]))
-      (dispatch [:data-set :suspend-info] nil)
-      app-state
-      )
-    ))
+        (dispatch [:handle-deactivation old-tab (:time suspend-info)])))
+    (-> app-state
+        (assoc-in [:ui-state :section] :time-track)
+        (assoc-in [:app-state :import] nil)
+        (assoc :hookup-done? true)
+        (assoc :data (assoc new-data :suspend-info nil)))))
 
 
 (register-handler
   :data-set
   (fn [app-state [_ key item]]
-    (let [new-state    (assoc-in app-state [:data key] item)
-          transit-data (to-transit (:data new-state))]
-      (storage/set {:data transit-data})
+    (let [new-state (assoc-in app-state [:data key] item)]
+      (data/set (:data new-state))
       new-state)
     ))
 
@@ -266,7 +247,6 @@
     (let [{:keys [tabId windowId]} activeInfo
           active-tab (:active-tab app-state)
           replace?   (= windowId (:windowId active-tab))]
-      ; (console/trace ::tab-activated tabId windowId replace? active-tab)
       (if replace?
         (do
           (dispatch [:handle-deactivation active-tab])
@@ -279,7 +259,6 @@
 (register-handler
   ::tab-updated
   (fn [app-state [_ {:keys [tabId tab]}]]
-    ; (console/trace ::tab-updated (:title tab) tabId tab (:active-tab app-state))
     (let [active-tab (:active-tab app-state)
           are-same?  (= tabId (:id active-tab))]
       (when (and are-same?
@@ -318,7 +297,6 @@
                                     :favIconUrl (:favIconUrl tab)
                                     :timestamp (now))]
       (console/trace time track? " milliseconds spent at " url-key tab)
-      ; (console/trace " Previous " url-time)
       (when track?
         (dispatch [:data-set :url-times (assoc url-times url-key new-time)]))
       app-state
@@ -360,7 +338,6 @@
       (>! content :background-ack)
       (recur connections)))
   )
-
 
 
 (defn ^:export main []

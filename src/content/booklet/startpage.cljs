@@ -1,10 +1,10 @@
 (ns booklet.startpage
-  (:require [booklet.utils :refer [from-transit key-from-url time-display]]
+  (:require [booklet.data :as data]
+            [booklet.utils :refer [key-from-url time-display]]
             [dommy.core :refer-macros [sel sel1] :as dommy]
             [khroma.runtime :as runtime]
             [khroma.log :as console]
-            [cljs.core.async :refer [>! <!]]
-            [khroma.storage :as storage])
+            [cljs.core.async :refer [>! <!]])
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 
@@ -32,7 +32,7 @@
           (dommy/append! (create-node :span " " "rgb(80, 99, 152)"))
           (dommy/append! (doto
                            (dommy/create-element :img)
-                           (dommy/set-attr! :src  "http://numergent.com/images/relevance/icon38.png")))
+                           (dommy/set-attr! :src "http://numergent.com/images/relevance/icon38.png")))
           (dommy/append! (create-node :span "[time viewed: " "rgb(80, 99, 152)"))
           (dommy/append! (create-node :span (time-display time) "rgb(140, 101, 153)"))
           (dommy/append! (create-node :span "]" "rgb(80, 99, 152)"))
@@ -41,7 +41,7 @@
 
 (defn do-transformations! []
   (go
-    (let [data  (from-transit (:data (<! (storage/get))))
+    (let [data  (<! (data/get))
           nodes (sel :.result_url_heading)
           base  (sel1 :.web_regular_results)]
       (doseq [node nodes]
