@@ -133,9 +133,9 @@
          [:a {:class "navbar-brand" :href "http://numergent.com" :target "_blank"} "Relevance"]]
         [:div {:class "collapse navbar-collapse", :id "bs-example-navbar-collapse-1"}
          [:ul {:class "nav navbar-nav"}
-          [navbar-item "Times" :time-track @section]
+          [navbar-item "View times per page" :time-track @section]
           ]
-         [:form {:class "navbar-form navbar-left", :role "search"}
+         #_ [:form {:class "navbar-form navbar-left", :role "search"}
           [:div {:class "form-group"}
            [:input {:type "text", :class "form-control", :placeholder "Search"}]]
           [:button {:type "submit", :class "btn btn-default"} "Submit"]]
