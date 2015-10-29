@@ -1,5 +1,5 @@
-(ns booklet.display
-  (:require [booklet.utils :refer [on-channel from-transit time-display]]
+(ns relevance.display
+  (:require [relevance.utils :refer [on-channel from-transit time-display]]
             [cljs.core.async :refer [>! <!]]
             [cljs.core :refer [random-uuid]]
             [cljsjs.react-bootstrap]

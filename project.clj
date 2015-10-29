@@ -1,4 +1,4 @@
-(defproject booklet-chrome "0.3.0-SNAPSHOT"
+(defproject relevance-chrome "0.3.0-SNAPSHOT"
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0"]
@@ -20,21 +20,21 @@
                {:source-paths ["src/background" "src/common"]
                 :compiler     {:output-to     "target/unpacked/background.js"
                                :output-dir    "target/js/background"
-                               :main          "booklet.background"
+                               :main          "relevance.background"
                                :optimizations :whitespace
                                :pretty-print  true}}
                :content
                {:source-paths ["src/content" "src/common"]
                 :compiler     {:output-to     "target/unpacked/content.js"
                                :output-dir    "target/js/content"
-                               :main          "booklet.startpage"
+                               :main          "relevance.startpage"
                                :optimizations :whitespace
                                :pretty-print  true}}
                :ui
                {:source-paths ["src/ui" "src/common"]
                 :compiler     {:output-to     "target/unpacked/ui.js"
                                :output-dir    "target/js/ui"
-                               :main          "booklet.display"
+                               :main          "relevance.display"
                                :optimizations :whitespace
                                :pretty-print  true}}}
 

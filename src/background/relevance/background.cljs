@@ -1,7 +1,7 @@
-(ns booklet.background
+(ns relevance.background
   (:require [cljs.core.async :refer [>! <!]]
-            [booklet.data :as data]
-            [booklet.utils :refer [on-channel key-from-url]]
+            [relevance.data :as data]
+            [relevance.utils :refer [on-channel key-from-url]]
             [khroma.alarms :as alarms]
             [khroma.context-menus :as menus]
             [khroma.idle :as idle]

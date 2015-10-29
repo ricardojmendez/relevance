@@ -1,4 +1,4 @@
-(ns booklet.utils
+(ns relevance.utils
   (:require [cljs.core.async :refer [<!]]
             [cognitect.transit :as transit])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))

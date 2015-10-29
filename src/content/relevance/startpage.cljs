@@ -1,6 +1,6 @@
-(ns booklet.startpage
-  (:require [booklet.data :as data]
-            [booklet.utils :refer [key-from-url time-display]]
+(ns relevance.startpage
+  (:require [relevance.data :as data]
+            [relevance.utils :refer [key-from-url time-display]]
             [dommy.core :refer-macros [sel sel1] :as dommy]
             [khroma.runtime :as runtime]
             [khroma.log :as console]

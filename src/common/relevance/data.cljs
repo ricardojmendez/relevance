@@ -1,5 +1,5 @@
-(ns booklet.data
-  (:require [booklet.utils :refer [to-transit from-transit]]
+(ns relevance.data
+  (:require [relevance.utils :refer [to-transit from-transit]]
             [cljs.core.async :refer [<!]]
             [khroma.storage :as storage])
   (:require-macros [cljs.core.async.macros :refer [go]]))
