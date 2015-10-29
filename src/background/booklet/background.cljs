@@ -100,7 +100,7 @@
   (fn [_]
     (go
       (dispatch [:data-import (:data (<! (storage/get))) true])
-      (dispatch [::window-focus {:windowId (:windowId (<! (windows/get-last-focused {:populate false})))}])
+      (dispatch [::window-focus {:windowId (:id (<! (windows/get-last-focused {:populate false})))}])
       (dispatch [:idle-state-change {:newState (<! (idle/query-state 30))}]))
     {:app-state    {}
      :hookup-done? false}))
