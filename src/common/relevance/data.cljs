@@ -5,12 +5,12 @@
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 
-(defn set
+(defn save
   "Saves our data block on the extension's storage"
   [data]
   (storage/set {:data (to-transit data)}))
 
-(defn get
+(defn load
   "Returns a channel where we'll put the entire data block read from the
   extension's storage"
   []
