@@ -5,10 +5,16 @@
   (:require-macros [cljs.core.async.macros :refer [go]]))
 
 
+(defn save-raw
+  "Saves the data raw, without converting it to transit first."
+  [data callback]
+  (storage/set {:data data} storage/local callback))
+
 (defn save
-  "Saves our data block on the extension's storage"
+  "Saves our data on the extension's storage after converting it to transit."
   [data]
-  (storage/set {:data (to-transit data)}))
+  (save-raw (to-transit data) nil))
+
 
 (defn load
   "Returns a channel where we'll put the entire data block read from the

@@ -61,6 +61,7 @@
   ;; handle immediately.
   (on-channel alarms/on-alarm dispatch ::on-alarm)
   (on-channel browser/on-clicked dispatch ::on-clicked-button)
+  (on-channel runtime/on-message dispatch ::on-message)
   (on-channel runtime/on-suspend dispatch-sync :suspend)
   (on-channel runtime/on-suspend-canceled dispatch-sync :log-content)
   (on-channel tabs/on-activated dispatch ::tab-activated)
@@ -113,7 +114,7 @@
 (register-handler
   :data-load
   (fn [app-state [_ new-data]]
-    (console/trace "New data on import" new-data)
+    (console/trace "New data on load" new-data)
     ;; Create a new id if we don't have one
     (when (empty? (:instance-id new-data))
       (dispatch [:data-set :instance-id (.-uuid (random-uuid))]))
@@ -213,6 +214,15 @@
   ::on-clicked-menu
   (fn [app-state [_ {:keys [info tab]}]]
     (dispatch [(keyword (:menuItemId info)) tab])
+    app-state
+    ))
+
+(register-handler
+  ::on-message
+  (fn [app-state [_ {:keys [message sender]}]]
+    ; (console/log "GOT INTERNAL MESSAGE" message "from" sender)
+    (condp = (keyword message)
+      :reload-data (go (dispatch [:data-load (<! (data/load))])))
     app-state
     ))
 
