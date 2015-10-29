@@ -5,9 +5,11 @@
             [cljsjs.react-bootstrap]
             [khroma.idle :as idle]
             [khroma.log :as console]
+            [khroma.runtime :as runtime]
             [khroma.storage :as storage]
             [reagent.core :as reagent]
-            [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]])
+            [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
+            [relevance.data :as data])
   (:require-macros [cljs.core :refer [goog-define]]
                    [cljs.core.async.macros :refer [go go-loop]]
                    [reagent.ratom :refer [reaction]]))
@@ -23,6 +25,7 @@
 
 ;; Application data, will be saved
 (register-sub :data general-query)
+(register-sub :raw-data general-query)
 ;; Transient data items
 (register-sub :ui-state general-query)
 (register-sub :app-state general-query)
@@ -58,6 +61,18 @@
 
 
 (register-handler
+  :data-import
+  (fn [app-state [_ transit-data]]
+    ;; We actually just need to save it, since ::storage-changed takes care
+    ;; of loading it and importing it.
+    (data/save-raw transit-data #(runtime/send-message :reload-data))
+    (-> app-state
+        (assoc-in [:ui-state :section] :time-track)
+        (assoc-in [:app-state :import] nil))
+    ))
+
+
+(register-handler
   ::initialize
   (fn [_]
     ;; Fake a ::storage-changed message to load the data from storage
@@ -78,7 +93,7 @@
     (let [new-value (get-in message [:changes :data :newValue])
           data      (from-transit new-value)]
       (if (not-empty data)
-        (assoc app-state :data data)
+        (assoc app-state :data data :raw-data new-value)
         app-state
         ))
     ))
@@ -192,17 +207,15 @@
 
 
 (defn data-export []
-  (let [data      (subscribe [:data])
-        as-string (reaction (.stringify js/JSON (clj->js @data) nil 2))]
+  (let [data (subscribe [:raw-data])]
     (fn []
       [:div
        [:div {:class "page-header"} [:h2 "Current data"]]
-       [:p (str "Copy the JSON below to a safe location. Size: " (count @as-string))]
+       [:p (str "Copy the text below to a safe location. Size: " (count @data))]
        [:textarea {:class     "form-control"
                    :rows      30
                    :read-only true
-                   ;; We will not export the current tab list
-                   :value     @as-string}
+                   :value     @data}
         ]
        ])))
 
@@ -214,7 +227,7 @@
        [:div {:class "page-header"} [:h2 "Import data"]]
        [:div {:class "alert alert-warning"}
         [:h4 "Warning!"]
-        [:p "Any data item for which there is a key on the JSON below be replaced!"]]
+        [:p "Your entire data will be replaced with the information below."]]
        [:textarea {:class     "form-control"
                    :rows      30
                    :value     @import-data

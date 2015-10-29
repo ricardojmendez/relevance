@@ -54,8 +54,14 @@
   don't end up receiving events when we don't yet have the environment
   set up to handle them."
   []
-  (on-channel alarms/on-alarm dispatch-sync ::on-alarm)
-  (on-channel browser/on-clicked dispatch-sync ::on-clicked-button)
+  ;; We should use dispatch for anything that does not absolutely require
+  ;; immediate handling, to avoid interferring with the regular initialization
+  ;; and event flow.  On this case, I' using it only for log-content,
+  ;; which has no effect on app-state, and for on-suspend, which we want to
+  ;; handle immediately.
+  (on-channel alarms/on-alarm dispatch ::on-alarm)
+  (on-channel browser/on-clicked dispatch ::on-clicked-button)
+  (on-channel runtime/on-message dispatch ::on-message)
   (on-channel runtime/on-suspend dispatch-sync :suspend)
   (on-channel runtime/on-suspend-canceled dispatch-sync :log-content)
   (on-channel tabs/on-activated dispatch ::tab-activated)
@@ -98,25 +104,22 @@
   ::initialize
   (fn [_]
     (go
-      (dispatch [:data-import (<! (data/get))])
+      (dispatch [:data-load (<! (data/load))])
       (dispatch [::window-focus {:windowId (:id (<! (windows/get-last-focused {:populate false})))}])
-      (dispatch [:idle-state-change {:newState (<! (idle/query-state 30))}]))
-    {:app-state    {}
-     :hookup-done? false}))
+      ;; We should only hook to the channels once, so we do it during the :initialize handler
+      (hook-to-channels))
+    {:app-state {}}))
 
 
 (register-handler
-  :data-import
+  :data-load
   (fn [app-state [_ new-data]]
-    (console/trace "New data on import" new-data)
+    (console/trace "New data on load" new-data)
     ;; Create a new id if we don't have one
     (when (empty? (:instance-id new-data))
       (dispatch [:data-set :instance-id (.-uuid (random-uuid))]))
-    ;; Save the data we just imported
-    (data/set new-data)
-    ;; We should only hook to the channels once.
-    (when (not (:hookup-done? app-state))
-      (hook-to-channels))
+    ;; Save the data we just received
+    (data/save new-data)
     ;; Process the suspend info
     (let [suspend-info (:suspend-info new-data)
           old-tab      (:active-tab suspend-info)
@@ -128,9 +131,6 @@
         (dispatch [:handle-activation old-tab (:start-time old-tab)])
         (dispatch [:handle-deactivation old-tab (:time suspend-info)])))
     (-> app-state
-        (assoc-in [:ui-state :section] :time-track)
-        (assoc-in [:app-state :import] nil)
-        (assoc :hookup-done? true)
         (assoc :data (assoc new-data :suspend-info nil)))))
 
 
@@ -138,7 +138,7 @@
   :data-set
   (fn [app-state [_ key item]]
     (let [new-state (assoc-in app-state [:data key] item)]
-      (data/set (:data new-state))
+      (data/save (:data new-state))
       new-state)
     ))
 
@@ -214,6 +214,15 @@
   ::on-clicked-menu
   (fn [app-state [_ {:keys [info tab]}]]
     (dispatch [(keyword (:menuItemId info)) tab])
+    app-state
+    ))
+
+(register-handler
+  ::on-message
+  (fn [app-state [_ {:keys [message sender]}]]
+    ; (console/log "GOT INTERNAL MESSAGE" message "from" sender)
+    (condp = (keyword message)
+      :reload-data (go (dispatch [:data-load (<! (data/load))])))
     app-state
     ))
 
