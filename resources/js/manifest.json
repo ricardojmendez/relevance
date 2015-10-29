@@ -14,7 +14,7 @@
     "128": "icon128.png"
   },
   "permissions": [
-    "tabs", "storage", "idle", "alarms", "contextMenus"
+    "tabs", "storage", "idle", "alarms", "contextMenus", "unlimitedStorage"
   ],
   "background": {
     "scripts": [
