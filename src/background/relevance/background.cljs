@@ -1,6 +1,7 @@
 (ns relevance.background
   (:require [cljs.core.async :refer [>! <!]]
             [relevance.data :as data]
+            [relevance.io :as io]
             [relevance.utils :refer [on-channel key-from-url]]
             [khroma.alarms :as alarms]
             [khroma.context-menus :as menus]
@@ -104,7 +105,7 @@
   ::initialize
   (fn [_]
     (go
-      (dispatch [:data-load (<! (data/load))])
+      (dispatch [:data-load (<! (io/load))])
       (dispatch [::window-focus {:windowId (:id (<! (windows/get-last-focused {:populate false})))}])
       ;; We should only hook to the channels once, so we do it during the :initialize handler
       (hook-to-channels))
@@ -119,7 +120,7 @@
     (when (empty? (:instance-id new-data))
       (dispatch [:data-set :instance-id (.-uuid (random-uuid))]))
     ;; Save the data we just received
-    (data/save new-data)
+    (io/save new-data)
     ;; Process the suspend info
     (let [suspend-info (:suspend-info new-data)
           old-tab      (:active-tab suspend-info)
@@ -138,7 +139,7 @@
   :data-set
   (fn [app-state [_ key item]]
     (let [new-state (assoc-in app-state [:data key] item)]
-      (data/save (:data new-state))
+      (io/save (:data new-state))
       new-state)
     ))
 
@@ -222,7 +223,7 @@
   (fn [app-state [_ {:keys [message sender]}]]
     ; (console/log "GOT INTERNAL MESSAGE" message "from" sender)
     (condp = (keyword message)
-      :reload-data (go (dispatch [:data-load (<! (data/load))])))
+      :reload-data (go (dispatch [:data-load (<! (io/load))])))
     app-state
     ))
 
@@ -292,22 +293,10 @@
   :track-time
   (fn [app-state [_ tab time]]
     (let [url-times (or (get-in app-state url-time-path) {})
-          url       (or (:url tab) "")
-          url-key   (key-from-url url)
-          url-time  (or (get url-times url-key)
-                        {:url       (:url tab)
-                         :time      0
-                         :timestamp 0})
-          ;; Don't track two messages too close together
-          track?    (and (not= 0 url-key)
-                         (< 100 (- (now) (:timestamp url-time))))
-          new-time  (assoc url-time :time (+ (:time url-time) time)
-                                    :title (:title tab)
-                                    :favIconUrl (:favIconUrl tab)
-                                    :timestamp (now))]
-      (console/trace time track? " milliseconds spent at " url-key tab)
-      (when track?
-        (dispatch [:data-set :url-times (assoc url-times url-key new-time)]))
+          new-times (data/track-time url-times tab time (now))]
+      (console/trace time " milliseconds spent at " tab)
+      (when (not= url-times new-times)
+        (dispatch [:data-set :url-times new-times]))
       app-state
       )))
 

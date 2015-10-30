@@ -36,6 +36,7 @@
                -314744948 "https://www.google.com/#hash"
                -596725840 "https://www.google.com/somePath?q=v"
                -327774960 "http://numergent.com/tags/khroma/"
+               -526558523 "http://numergent.com/opensource/"
                )
   )
 

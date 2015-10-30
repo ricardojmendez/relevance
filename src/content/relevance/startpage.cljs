@@ -1,5 +1,5 @@
 (ns relevance.startpage
-  (:require [relevance.data :as data]
+  (:require [relevance.io :as io]
             [relevance.utils :refer [key-from-url time-display]]
             [dommy.core :refer-macros [sel sel1] :as dommy]
             [khroma.runtime :as runtime]
@@ -41,7 +41,7 @@
 
 (defn do-transformations! []
   (go
-    (let [data  (<! (data/load))
+    (let [data  (<! (io/load))
           nodes (sel :.result_url_heading)
           base  (sel1 :.web_regular_results)]
       (doseq [node nodes]

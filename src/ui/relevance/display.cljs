@@ -9,7 +9,7 @@
             [khroma.storage :as storage]
             [reagent.core :as reagent]
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
-            [relevance.data :as data])
+            [relevance.io :as io])
   (:require-macros [cljs.core :refer [goog-define]]
                    [cljs.core.async.macros :refer [go go-loop]]
                    [reagent.ratom :refer [reaction]]))
@@ -65,7 +65,7 @@
   (fn [app-state [_ transit-data]]
     ;; We actually just need to save it, since ::storage-changed takes care
     ;; of loading it and importing it.
-    (data/save-raw transit-data #(runtime/send-message :reload-data))
+    (io/save-raw transit-data #(runtime/send-message :reload-data))
     (-> app-state
         (assoc-in [:ui-state :section] :time-track)
         (assoc-in [:app-state :import] nil))
