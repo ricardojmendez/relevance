@@ -174,8 +174,7 @@
     ;; was deactivated (which defaults to now)
     [app-state [_ tab end-time]]
     (console/trace " Deactivating " tab)
-    (when (or (:active tab)
-              (< 0 (:start-time tab)))
+    (when (< 0 (:start-time tab))
       (dispatch [:track-time tab (- (or end-time (now))
                                     (:start-time tab))]))
     app-state))
