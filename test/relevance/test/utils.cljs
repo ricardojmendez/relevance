@@ -5,29 +5,29 @@
 
 
 (deftest test-key-from-url
-  (is (= (utils/key-from-url "http://localhost/")
-         (utils/key-from-url "https://localhost/"))
+  (is (= (utils/url-key "http://localhost/")
+         (utils/url-key "https://localhost/"))
       "Key should disregard protocol")
-  (is (= (utils/key-from-url "https://localhost")
-         (utils/key-from-url "https://localhost/"))
+  (is (= (utils/url-key "https://localhost")
+         (utils/url-key "https://localhost/"))
       "Key should disregard trailing slashes")
-  (is (= (utils/key-from-url "https://localhost#hash")
-         (utils/key-from-url "https://localhost/#hash"))
+  (is (= (utils/url-key "https://localhost#hash")
+         (utils/url-key "https://localhost/#hash"))
       "Key should disregard trailing hashtags")
-  (is (= (utils/key-from-url "https://LOCALHOST")
-         (utils/key-from-url "https://localhost"))
+  (is (= (utils/url-key "https://LOCALHOST")
+         (utils/url-key "https://localhost"))
       "Key is not case-sensitive")
-  (is (= (utils/key-from-url "https://LOCALHOST/someUrl#hash")
+  (is (= (utils/url-key "https://LOCALHOST/someUrl#hash")
          (hash-string "localhost/someUrl"))
       "Our hash calculations are consistent with hash-string")
-  (is (not= (utils/key-from-url "https://localhost?q=v")
-            (utils/key-from-url "https://localhost?q="))
+  (is (not= (utils/url-key "https://localhost?q=v")
+            (utils/url-key "https://localhost?q="))
       "Key should respect query strings")
-  (is (not= (utils/key-from-url "https://localhost.com/path")
-            (utils/key-from-url "https://localhost.com/Path"))
+  (is (not= (utils/url-key "https://localhost.com/path")
+            (utils/url-key "https://localhost.com/Path"))
       "Path is case-sensitive")
   ;; Let's confirm we actually return a consistent integer for some known values
-  (are [k url] (= k (utils/key-from-url url))
+  (are [k url] (= k (utils/url-key url))
                -20650657 "https://LOCALHOST/someUrl#hash"
                -380467869 "http://google.com"
                -380467869 "https://google.com"
@@ -56,3 +56,19 @@
                     124076042 "1d 10h"
                     248996042 "2d 21h"
                     ))
+
+(deftest test-host
+  (are [url name] (= (utils/hostname url) name)
+                  "https://www.google.com/some?q=v" "www.google.com"
+                  "https://www.Google.com/some?q=v" "www.google.com"
+                  "https://WWW.GOOGLE.COM/some?q=v" "www.google.com"
+                  "http://WWW.GOOGLE.COM/some?q=v" "www.google.com"
+                  "https://GOOGLE.COM:443/some?q=v" "google.com"
+                  "https://GOOGLE.COM:3000/some?q=v" "google.com"     ; host would have included the port
+                  "http://numergent.com/tag/khroma" "numergent.com"
+                  "about:blank" ""
+                  "chrome://extensions/?id=okhigbflgnbihoiokilagelkalkcigfp" "extensions"
+                  "chrome-extension://okhigbflgnbihoiokilagelkalkcigfp/index.html" "okhigbflgnbihoiokilagelkalkcigfp"
+                  "" ""
+                  nil nil
+                  ))

@@ -25,7 +25,19 @@
   (transit/read (transit/reader :json) transit-data))
 
 
-(defn key-from-url
+(defn hostname
+  "Returns the host name for a URL, disregarding port and protocol"
+  [url]
+  (when url
+    (-> (dommy/create-element :a)
+        (dommy/set-attr! :href url)
+        (.-hostname)))
+  )
+
+(defn host-key [host]
+  (hash-string host))
+
+(defn url-key
   "Shortens a URL to remove anchor and protocol, and returns an integer based on
   the result."
   [url]

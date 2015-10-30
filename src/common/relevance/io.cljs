@@ -1,5 +1,5 @@
 (ns relevance.io
-  (:require [relevance.utils :refer [to-transit from-transit key-from-url]]
+  (:require [relevance.utils :refer [to-transit from-transit url-key]]
             [cljs.core.async :refer [<!]]
             [khroma.storage :as storage])
   (:require-macros [cljs.core.async.macros :refer [go]]))

@@ -1,9 +1,10 @@
 (ns relevance.test.migrations
-  (:require [cljs.test :refer-macros [deftest testing is]]
+  (:require [cljs.test :refer-macros [deftest testing is are]]
+            [relevance.migrations :as migrations]
             [relevance.utils :as utils]
             ))
 
-(def initial-test-data
+(def base-data
   {:instance-id  "67b5c8eb-ae97-42ad-b6bc-803ac7e31221"
    :suspend-info nil
    :url-times    {1274579744
@@ -41,7 +42,38 @@
 
 
 (deftest validate-key-fn
-  (doseq [[k v] (:url-times initial-test-data)]
-    (is (= k (utils/key-from-url (:url v))) (str "URL " (:url v)))))
+  (testing "Make sure our test ids are still valid"
+    (doseq [[k v] (:url-times base-data)]
+      (is (= k (utils/url-key (:url v))) (str "URL " (:url v))))))
 
+
+(deftest test-migrations
+  (testing "Empty migration"
+    (let [new-data   (migrations/migrate {})
+          without-id (dissoc new-data :instance-id)]
+      (is (string? (:instance-id new-data)))
+      (is (= without-id {:data-version 1, :url-times {}, :site-times {}}))
+      ))
+  (testing "v1 migration"
+    (let [v1 (migrations/migrate base-data)]
+      (is (not= v1 base-data))
+      (is (= 5 (count v1)) "We should have received five keys")
+      (are [k] (some? (k v1)) :url-times :instance-id :data-version :site-times)
+      (is (= (:instance-id v1) (:instance-id base-data)) "Instance id should be preserved")
+      (is (= 1 (:data-version v1)) "Data should have been tagged with the version")
+      (doseq [[k v] (:url-times v1)]
+        (is (integer? k))
+        (is (nil? (:favIconUrl v)))
+        )
+      (is (= (:site-times v1) {-331299663  {:host "developer.chrome.com" :time 1018982 :favIconUrl "https://developer.chrome.com/favicon.ico"}
+                               -967938826  {:host "www.polygon.com" :time 14711 :favIconUrl "https://cdn2.vox-cdn.com/community_logos/42931/favicon.ico"}
+                               -1466097211 {:host "lanyrd.com" :time 5617 :favIconUrl nil}
+                               -915908674  {:host "www.kitco.com" :time 4432 :favIconUrl nil}})
+          "Site data should have been aggregated")
+      ;; Test recurrent migration
+      (is (= v1 (migrations/migrate-to-latest base-data)) "Migrating all the way to the latest should yield the same v1 data")
+      (is (= v1 (migrations/migrate-to-latest v1)) "Migrating all the way to the latest should yield the same v1 data")
+      (is (not= base-data (migrations/migrate-to-latest base-data)) "Migration loop should have returned a different data set")
+      ))
+  )
 

@@ -2,7 +2,7 @@
   (:require [cljs.core.async :refer [>! <!]]
             [relevance.data :as data]
             [relevance.io :as io]
-            [relevance.utils :refer [on-channel key-from-url]]
+            [relevance.utils :refer [on-channel url-key]]
             [khroma.alarms :as alarms]
             [khroma.context-menus :as menus]
             [khroma.idle :as idle]
@@ -12,7 +12,8 @@
             [khroma.windows :as windows]
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
             [khroma.extension :as ext]
-            [khroma.browser-action :as browser])
+            [khroma.browser-action :as browser]
+            [relevance.migrations :as migrations])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 
@@ -31,6 +32,7 @@
 
 (def select-tab-keys #(select-keys % relevant-tab-keys))
 (def url-time-path [:data :url-times])
+(def site-time-path [:data :site-times])
 
 ;;;;-------------------------------------
 ;;;; Functions
@@ -86,7 +88,7 @@
 (defn sort-tabs! [window-id url-times]
   (go
     (let [tabs (->> (:tabs (<! (windows/get window-id)))
-                    (map #(assoc % :time (or (:time (get url-times (key-from-url (:url %))))
+                    (map #(assoc % :time (or (:time (get url-times (url-key (:url %))))
                                              (- 2000 (:index %)))))
                     (sort-by #(* -1 (:time %)))
                     (map-indexed #(hash-map :index %1
@@ -114,25 +116,23 @@
 
 (register-handler
   :data-load
-  (fn [app-state [_ new-data]]
-    (console/trace "New data on load" new-data)
-    ;; Create a new id if we don't have one
-    (when (empty? (:instance-id new-data))
-      (dispatch [:data-set :instance-id (.-uuid (random-uuid))]))
-    ;; Save the data we just received
-    (io/save new-data)
-    ;; Process the suspend info
-    (let [suspend-info (:suspend-info new-data)
-          old-tab      (:active-tab suspend-info)
-          current-tab  (:active-tab app-state)
-          is-same?     (and (= (:id old-tab) (:id current-tab))
-                            (= (:url old-tab) (:url current-tab))
-                            (= (:windowId old-tab) (:windowId current-tab)))]
-      (if is-same?
-        (dispatch [:handle-activation old-tab (:start-time old-tab)])
-        (dispatch [:handle-deactivation old-tab (:time suspend-info)])))
-    (-> app-state
-        (assoc :data (assoc new-data :suspend-info nil)))))
+  (fn [app-state [_ loaded]]
+    (let [new-data (migrations/migrate-to-latest loaded)]
+      (console/trace "Data load" loaded "migrated" new-data)
+      ;; Save the migrated data we just received
+      (io/save new-data)
+      ;; Process the suspend info
+      (let [suspend-info (:suspend-info new-data)
+            old-tab      (:active-tab suspend-info)
+            current-tab  (:active-tab app-state)
+            is-same?     (and (= (:id old-tab) (:id current-tab))
+                              (= (:url old-tab) (:url current-tab))
+                              (= (:windowId old-tab) (:windowId current-tab)))]
+        (if is-same?
+          (dispatch [:handle-activation old-tab (:start-time old-tab)])
+          (dispatch [:handle-deactivation old-tab (:time suspend-info)])))
+      (-> app-state
+          (assoc :data (dissoc new-data :suspend-info))))))
 
 
 (register-handler
@@ -292,12 +292,13 @@
 (register-handler
   :track-time
   (fn [app-state [_ tab time]]
-    (let [url-times (or (get-in app-state url-time-path) {})
-          new-times (data/track-time url-times tab time (now))]
+    (let [data       (:data app-state)
+          url-times  (data/track-url-time (or (:url-times data) {}) tab time (now))
+          site-times (data/track-site-time (or (:site-times data) {}) tab time (now))
+          new-data   (assoc data :url-times url-times :site-times site-times)]
       (console/trace time " milliseconds spent at " tab)
-      (when (not= url-times new-times)
-        (dispatch [:data-set :url-times new-times]))
-      app-state
+      (io/save new-data)
+      (assoc app-state :data new-data)
       )))
 
 (register-handler
