@@ -3,7 +3,7 @@
             [relevance.data :as data]
             [relevance.io :as io]
             [relevance.migrations :as migrations]
-            [relevance.utils :refer [on-channel url-key host-key hostname]]
+            [relevance.utils :refer [on-channel url-key host-key hostname is-http?]]
             [khroma.alarms :as alarms]
             [khroma.context-menus :as menus]
             [khroma.idle :as idle]
@@ -25,6 +25,7 @@
 
 
 (def window-alarm "window-alarm")
+(def non-http-penalty 0.05)
 (def relevant-tab-keys [:windowId :id :active :url :start-time :title :favIconUrl])
 (def select-tab-keys #(select-keys % relevant-tab-keys))
 
@@ -82,13 +83,23 @@
           (tabs/create {:url ext-url})))))
 
 
+
+(defn time-score [tab url-times site-times]
+  (let [url       (:url tab)
+        idx       (:index tab)
+        tab-time  (:time (get url-times (url-key url)))
+        site-time (:time (get site-times (host-key (hostname url))))
+        total     (+ tab-time site-time)
+        score     (if (is-http? url) total (* total non-http-penalty))
+        ]
+    (or (when tab-time score)
+        (- 2000 idx))))
+
 (defn sort-tabs! [window-id data]
   (go
     (let [{:keys [url-times site-times]} data
           tabs (->> (:tabs (<! (windows/get window-id)))
-                    (map #(assoc % :time (or (when-let [time (:time (get url-times (url-key (:url %))))]
-                                               (+ time (:time (get site-times (host-key (hostname (:url %)))))))
-                                             (- 2000 (:index %)))))
+                    (map #(assoc % :time (time-score % url-times site-times)))
                     (sort-by #(* -1 (:time %)))
                     (map-indexed #(hash-map :index %1
                                             :id (:id %2))))]

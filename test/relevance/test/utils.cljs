@@ -72,3 +72,32 @@
                   "" ""
                   nil nil
                   ))
+
+
+(deftest test-protocol
+  (are [url name] (= (utils/protocol url) name)
+                  "https://www.google.com" "https:"
+                  "http://www.Google.com" "http:"
+                  "HTTP://www.numergent.com" "http:"
+                  "HTTPS://www.numergent.com" "https:"
+                  "about:blank" "about:"
+                  "chrome://extensions/?id=okhigbflgnbihoiokilagelkalkcigfp" "chrome:"
+                  "chrome-extension://okhigbflgnbihoiokilagelkalkcigfp/index.html" "chrome-extension:"
+                  "" "file:"
+                  nil nil
+                  ))
+
+
+(deftest test-is-http
+  (are [url result] (= (utils/is-http? url) result)
+                    "http:" true
+                    "https:" true
+                    "HTTP:" true
+                    "HTTPS:" true
+                    "http://localhost" true
+                    "https://numergent.com/" true
+                    "chrome://extensions/?id=okhigbflgnbihoiokilagelkalkcigfp" false
+                    "http" false
+                    "" false
+                    nil false
+                    ))

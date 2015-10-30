@@ -31,8 +31,21 @@
   (when url
     (-> (dommy/create-element :a)
         (dommy/set-attr! :href url)
-        (.-hostname)))
-  )
+        (.-hostname))))
+
+(defn protocol
+  "Returns the protocol for a URL"
+  [url]
+  (when url
+    (-> (dommy/create-element :a)
+        (dommy/set-attr! :href url)
+        (.-protocol))))
+
+(defn is-http?
+  "Returns true if the string starts with http: or https:"
+  [url]
+  (and (some? url)
+       (some? (re-find #"\bhttps?:" (protocol url)))))
 
 (defn host-key [host]
   (hash-string host))
