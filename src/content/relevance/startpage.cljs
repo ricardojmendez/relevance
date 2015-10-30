@@ -1,6 +1,6 @@
 (ns relevance.startpage
-  (:require [relevance.data :as data]
-            [relevance.utils :refer [key-from-url time-display]]
+  (:require [relevance.io :as io]
+            [relevance.utils :refer [url-key time-display]]
             [dommy.core :refer-macros [sel sel1] :as dommy]
             [khroma.runtime :as runtime]
             [khroma.log :as console]
@@ -17,7 +17,7 @@
   [database node]
   (let [parent    (.-parentNode node)
         href      (.-href parent)
-        id        (key-from-url href)
+        id        (url-key href)
         data      (get database id)
         time      (:time data)
         root-item (-> parent .-parentNode .-parentNode .-parentNode)  ; Yeah, hacky as fuck
@@ -41,7 +41,7 @@
 
 (defn do-transformations! []
   (go
-    (let [data  (<! (data/load))
+    (let [data  (<! (io/load))
           nodes (sel :.result_url_heading)
           base  (sel1 :.web_regular_results)]
       (doseq [node nodes]

@@ -1,7 +1,9 @@
 (ns relevance.background
   (:require [cljs.core.async :refer [>! <!]]
             [relevance.data :as data]
-            [relevance.utils :refer [on-channel key-from-url]]
+            [relevance.io :as io]
+            [relevance.migrations :as migrations]
+            [relevance.utils :refer [on-channel url-key host-key hostname is-http?]]
             [khroma.alarms :as alarms]
             [khroma.context-menus :as menus]
             [khroma.idle :as idle]
@@ -11,7 +13,8 @@
             [khroma.windows :as windows]
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
             [khroma.extension :as ext]
-            [khroma.browser-action :as browser])
+            [khroma.browser-action :as browser]
+            )
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 
@@ -22,14 +25,12 @@
 
 
 (def window-alarm "window-alarm")
+(def non-http-penalty 0.05)
+(def relevant-tab-keys [:windowId :id :active :url :start-time :title :favIconUrl])
+(def select-tab-keys #(select-keys % relevant-tab-keys))
 
 (defn now [] (.now js/Date))
 
-
-(def relevant-tab-keys [:windowId :id :active :url :start-time :title :favIconUrl])
-
-(def select-tab-keys #(select-keys % relevant-tab-keys))
-(def url-time-path [:data :url-times])
 
 ;;;;-------------------------------------
 ;;;; Functions
@@ -82,11 +83,23 @@
           (tabs/create {:url ext-url})))))
 
 
-(defn sort-tabs! [window-id url-times]
+
+(defn time-score [tab url-times site-times]
+  (let [url       (:url tab)
+        idx       (:index tab)
+        tab-time  (:time (get url-times (url-key url)))
+        site-time (:time (get site-times (host-key (hostname url))))
+        total     (+ tab-time site-time)
+        score     (if (is-http? url) total (* total non-http-penalty))
+        ]
+    (or (when tab-time score)
+        (- 2000 idx))))
+
+(defn sort-tabs! [window-id data]
   (go
-    (let [tabs (->> (:tabs (<! (windows/get window-id)))
-                    (map #(assoc % :time (or (:time (get url-times (key-from-url (:url %))))
-                                             (- 2000 (:index %)))))
+    (let [{:keys [url-times site-times]} data
+          tabs (->> (:tabs (<! (windows/get window-id)))
+                    (map #(assoc % :time (time-score % url-times site-times)))
                     (sort-by #(* -1 (:time %)))
                     (map-indexed #(hash-map :index %1
                                             :id (:id %2))))]
@@ -104,7 +117,7 @@
   ::initialize
   (fn [_]
     (go
-      (dispatch [:data-load (<! (data/load))])
+      (dispatch [:data-load (<! (io/load))])
       (dispatch [::window-focus {:windowId (:id (<! (windows/get-last-focused {:populate false})))}])
       ;; We should only hook to the channels once, so we do it during the :initialize handler
       (hook-to-channels))
@@ -113,32 +126,30 @@
 
 (register-handler
   :data-load
-  (fn [app-state [_ new-data]]
-    (console/trace "New data on load" new-data)
-    ;; Create a new id if we don't have one
-    (when (empty? (:instance-id new-data))
-      (dispatch [:data-set :instance-id (.-uuid (random-uuid))]))
-    ;; Save the data we just received
-    (data/save new-data)
-    ;; Process the suspend info
-    (let [suspend-info (:suspend-info new-data)
-          old-tab      (:active-tab suspend-info)
-          current-tab  (:active-tab app-state)
-          is-same?     (and (= (:id old-tab) (:id current-tab))
-                            (= (:url old-tab) (:url current-tab))
-                            (= (:windowId old-tab) (:windowId current-tab)))]
-      (if is-same?
-        (dispatch [:handle-activation old-tab (:start-time old-tab)])
-        (dispatch [:handle-deactivation old-tab (:time suspend-info)])))
-    (-> app-state
-        (assoc :data (assoc new-data :suspend-info nil)))))
+  (fn [app-state [_ loaded]]
+    (let [new-data (migrations/migrate-to-latest loaded)]
+      (console/trace "Data load" loaded "migrated" new-data)
+      ;; Save the migrated data we just received
+      (io/save new-data)
+      ;; Process the suspend info
+      (let [suspend-info (:suspend-info new-data)
+            old-tab      (:active-tab suspend-info)
+            current-tab  (:active-tab app-state)
+            is-same?     (and (= (:id old-tab) (:id current-tab))
+                              (= (:url old-tab) (:url current-tab))
+                              (= (:windowId old-tab) (:windowId current-tab)))]
+        (if is-same?
+          (dispatch [:handle-activation old-tab (:start-time old-tab)])
+          (dispatch [:handle-deactivation old-tab (:time suspend-info)])))
+      (-> app-state
+          (assoc :data (dissoc new-data :suspend-info))))))
 
 
 (register-handler
   :data-set
   (fn [app-state [_ key item]]
     (let [new-state (assoc-in app-state [:data key] item)]
-      (data/save (:data new-state))
+      (io/save (:data new-state))
       new-state)
     ))
 
@@ -222,7 +233,7 @@
   (fn [app-state [_ {:keys [message sender]}]]
     ; (console/log "GOT INTERNAL MESSAGE" message "from" sender)
     (condp = (keyword message)
-      :reload-data (go (dispatch [:data-load (<! (data/load))])))
+      :reload-data (go (dispatch [:data-load (<! (io/load))])))
     app-state
     ))
 
@@ -237,7 +248,7 @@
 (register-handler
   :on-relevance-sort-tabs
   (fn [app-state [_ tab]]
-    (sort-tabs! (:windowId tab) (get-in app-state url-time-path))
+    (sort-tabs! (:windowId tab) (:data app-state))
     app-state))
 
 
@@ -291,24 +302,13 @@
 (register-handler
   :track-time
   (fn [app-state [_ tab time]]
-    (let [url-times (or (get-in app-state url-time-path) {})
-          url       (or (:url tab) "")
-          url-key   (key-from-url url)
-          url-time  (or (get url-times url-key)
-                        {:url       (:url tab)
-                         :time      0
-                         :timestamp 0})
-          ;; Don't track two messages too close together
-          track?    (and (not= 0 url-key)
-                         (< 100 (- (now) (:timestamp url-time))))
-          new-time  (assoc url-time :time (+ (:time url-time) time)
-                                    :title (:title tab)
-                                    :favIconUrl (:favIconUrl tab)
-                                    :timestamp (now))]
-      (console/trace time track? " milliseconds spent at " url-key tab)
-      (when track?
-        (dispatch [:data-set :url-times (assoc url-times url-key new-time)]))
-      app-state
+    (let [data       (:data app-state)
+          url-times  (data/track-url-time (or (:url-times data) {}) tab time (now))
+          site-times (data/track-site-time (or (:site-times data) {}) tab time (now))
+          new-data   (assoc data :url-times url-times :site-times site-times)]
+      (console/trace time " milliseconds spent at " tab)
+      (io/save new-data)
+      (assoc app-state :data new-data)
       )))
 
 (register-handler

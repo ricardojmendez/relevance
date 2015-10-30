@@ -1,5 +1,5 @@
 (ns relevance.display
-  (:require [relevance.utils :refer [on-channel from-transit time-display]]
+  (:require [relevance.utils :refer [on-channel from-transit time-display host-key hostname]]
             [cljs.core.async :refer [>! <!]]
             [cljs.core :refer [random-uuid]]
             [cljsjs.react-bootstrap]
@@ -9,7 +9,7 @@
             [khroma.storage :as storage]
             [reagent.core :as reagent]
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
-            [relevance.data :as data])
+            [relevance.io :as io])
   (:require-macros [cljs.core :refer [goog-define]]
                    [cljs.core.async.macros :refer [go go-loop]]
                    [reagent.ratom :refer [reaction]]))
@@ -65,9 +65,9 @@
   (fn [app-state [_ transit-data]]
     ;; We actually just need to save it, since ::storage-changed takes care
     ;; of loading it and importing it.
-    (data/save-raw transit-data #(runtime/send-message :reload-data))
+    (io/save-raw transit-data #(runtime/send-message :reload-data))
     (-> app-state
-        (assoc-in [:ui-state :section] :time-track)
+        (assoc-in [:ui-state :section] :url-times)
         (assoc-in [:app-state :import] nil))
     ))
 
@@ -78,7 +78,7 @@
     ;; Fake a ::storage-changed message to load the data from storage
     (go (dispatch [::storage-changed {:changes {:data {:newValue (:data (<! (storage/get)))}}}]))
     {:app-state {}
-     :ui-state  {:section :time-track}}))
+     :ui-state  {:section :url-times}}))
 
 
 (register-handler
@@ -133,12 +133,13 @@
          [:a {:class "navbar-brand" :href "http://numergent.com" :target "_blank"} "Relevance"]]
         [:div {:class "collapse navbar-collapse", :id "bs-example-navbar-collapse-1"}
          [:ul {:class "nav navbar-nav"}
-          [navbar-item "View times per page" :time-track @section]
+          [navbar-item "Times per page" :url-times @section]
+          [navbar-item "Times per site" :site-times @section]
           ]
-         #_ [:form {:class "navbar-form navbar-left", :role "search"}
-          [:div {:class "form-group"}
-           [:input {:type "text", :class "form-control", :placeholder "Search"}]]
-          [:button {:type "submit", :class "btn btn-default"} "Submit"]]
+         #_[:form {:class "navbar-form navbar-left", :role "search"}
+            [:div {:class "form-group"}
+             [:input {:type "text", :class "form-control", :placeholder "Search"}]]
+            [:button {:type "submit", :class "btn btn-default"} "Submit"]]
          [:ul {:class "nav navbar-nav navbar-right"}
           [navbar-item "Export" :export @section]
           [navbar-item "Import" :import @section]]]]])))
@@ -166,14 +167,13 @@
                   :on-click (:action @modal-info)} (:action-label @modal-info)]
         ]])))
 
-(defn list-urls [tabs]
+(defn list-urls [urls site-data]
   (->>
-    tabs
-    (sort-by :index)
+    urls
     (map-indexed
       (fn [i tab]
         (let [url     (:url tab)
-              favicon (:favIconUrl tab)]
+              favicon (:favIconUrl (get site-data (host-key (hostname url))))]
           ^{:key i}
           [:tr
            [:td {:class "col-sm-1"} (time-display (:time tab))]
@@ -187,8 +187,9 @@
            [:td {:class "col-sm-5"} url]])))))
 
 
-(defn div-timetrack []
+(defn div-urltimes []
   (let [url-times  (subscribe [:data :url-times])
+        site-times (subscribe [:data :site-times])
         url-values (reaction (filter-tabs (vals @url-times)))
         to-list    (reaction (sort-by #(* -1 (:time %)) @url-values))]
     (fn []
@@ -201,7 +202,38 @@
           [:th "Title"]
           [:th "URL"]]]
         [:tbody
-         (list-urls @to-list)]
+         (list-urls @to-list @site-times)]
+        ]])
+    ))
+
+(defn div-sitetimes []
+  (let [site-times (subscribe [:data :site-times])
+        sites      (reaction (vals @site-times))
+        to-list    (reaction (sort-by #(* -1 (:time %)) @sites))]
+    (fn []
+      [:div
+       [:div {:class "page-header"} [:h2 "Times"]]
+       [:table {:class "table table-striped table-hover"}
+        [:thead
+         [:tr
+          [:th "#"]
+          [:th "Site"]]]
+        [:tbody
+         (->>
+           @to-list
+           (map-indexed
+             (fn [i site]
+               (let [url     (:host site)
+                     favicon (:favIconUrl site)]
+                 ^{:key i}
+                 [:tr
+                  [:td {:class "col-sm-1"} (time-display (:time site))]
+                  [:td {:class "col-sm-6"} (if favicon
+                                             [:img {:src    favicon
+                                                    :width  16
+                                                    :height 16}])
+                   url]
+                  ]))))]
         ]])
     ))
 
@@ -239,7 +271,8 @@
 
 (def component-dir {:export     data-export
                     :import     data-import
-                    :time-track div-timetrack})
+                    :url-times  div-urltimes
+                    :site-times div-sitetimes})
 
 
 (defn main-section []

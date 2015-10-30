@@ -7,13 +7,19 @@
                  [com.cognitect/transit-cljs "0.8.225"]
                  [cljsjs/react-bootstrap "0.25.2-0" :exclusions [org.webjars.bower/jquery]]
                  [khroma "0.2.0-SNAPSHOT"]
+                 [lein-doo "0.1.6-SNAPSHOT"]
                  [prismatic/dommy "1.1.0"]
                  [re-frame "0.4.1" :exclusions [cljsjs/react]]
                  ]
   :source-paths ["src/ui" "src/common" "src/background" "src/content"]
+  :test-paths ["test"]
 
   :plugins [[lein-cljsbuild "1.1.0"]
-            [lein-chromebuild "0.3.0"]]
+            [lein-chromebuild "0.3.0"]
+            [lein-doo "0.1.6-SNAPSHOT"]
+            ]
+
+  :doo {:build "test"}
 
   :cljsbuild {:builds
               {:background
@@ -36,7 +42,8 @@
                                :output-dir    "target/js/ui"
                                :main          "relevance.display"
                                :optimizations :whitespace
-                               :pretty-print  true}}}
+                               :pretty-print  true}}
+               }
 
               }
 
@@ -54,6 +61,16 @@
                 :content    {:compiler {:optimizations :advanced
                                         :pretty-print  false}}
                 :ui         {:compiler {:optimizations :advanced
-                                        :pretty-print  false}}}}
-
-              }})
+                                        :pretty-print  false}}}}}
+             :test
+             {:cljsbuild
+              {:builds
+               {:test
+                {:source-paths ["test" "src/common"]
+                 :compiler     {:output-to     "target/js/test/relevance-tests.js"
+                                :output-dir    "target/js/test"
+                                :main          relevance.test.runner
+                                :optimizations :none
+                                :pretty-print  :true}}}}
+              }
+             })
