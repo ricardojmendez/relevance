@@ -2,7 +2,8 @@
   (:require [cljs.core.async :refer [>! <!]]
             [relevance.data :as data]
             [relevance.io :as io]
-            [relevance.utils :refer [on-channel url-key]]
+            [relevance.migrations :as migrations]
+            [relevance.utils :refer [on-channel url-key host-key hostname]]
             [khroma.alarms :as alarms]
             [khroma.context-menus :as menus]
             [khroma.idle :as idle]
@@ -13,7 +14,7 @@
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
             [khroma.extension :as ext]
             [khroma.browser-action :as browser]
-            [relevance.migrations :as migrations])
+            )
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 
@@ -24,15 +25,11 @@
 
 
 (def window-alarm "window-alarm")
+(def relevant-tab-keys [:windowId :id :active :url :start-time :title :favIconUrl])
+(def select-tab-keys #(select-keys % relevant-tab-keys))
 
 (defn now [] (.now js/Date))
 
-
-(def relevant-tab-keys [:windowId :id :active :url :start-time :title :favIconUrl])
-
-(def select-tab-keys #(select-keys % relevant-tab-keys))
-(def url-time-path [:data :url-times])
-(def site-time-path [:data :site-times])
 
 ;;;;-------------------------------------
 ;;;; Functions
@@ -85,10 +82,12 @@
           (tabs/create {:url ext-url})))))
 
 
-(defn sort-tabs! [window-id url-times]
+(defn sort-tabs! [window-id data]
   (go
-    (let [tabs (->> (:tabs (<! (windows/get window-id)))
-                    (map #(assoc % :time (or (:time (get url-times (url-key (:url %))))
+    (let [{:keys [url-times site-times]} data
+          tabs (->> (:tabs (<! (windows/get window-id)))
+                    (map #(assoc % :time (or (when-let [time (:time (get url-times (url-key (:url %))))]
+                                               (+ time (:time (get site-times (host-key (hostname (:url %)))))))
                                              (- 2000 (:index %)))))
                     (sort-by #(* -1 (:time %)))
                     (map-indexed #(hash-map :index %1
@@ -238,7 +237,7 @@
 (register-handler
   :on-relevance-sort-tabs
   (fn [app-state [_ tab]]
-    (sort-tabs! (:windowId tab) (get-in app-state url-time-path))
+    (sort-tabs! (:windowId tab) (:data app-state))
     app-state))
 
 
