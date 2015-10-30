@@ -217,6 +217,10 @@
 (register-handler
   ::on-clicked-button
   (fn [app-state [_ {:keys [tab]}]]
+    ;; Force it to track the time up until now
+    (let [active-tab (:active-tab app-state)]
+      (dispatch [:handle-deactivation active-tab])
+      (dispatch [:handle-activation active-tab]))
     (dispatch [:on-relevance-sort-tabs tab])
     app-state
     ))
