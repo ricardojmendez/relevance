@@ -61,6 +61,15 @@
                   "" 0
                   nil 0))
 
+(deftest test-url-key
+  ;;Test the url-key function against known values
+  (are [url key] (= (utils/url-key url) key)
+                 "http://numergent.com/articles/" -925262547
+                 "https://google.com/search?q=v" 633277110
+                 "https://startpage.com/my/settings#hash" 317544347
+                 "" 0
+                 nil 0))
+
 
 (deftest test-track-url-time
   (testing "Add time to an existing tab"
@@ -121,6 +130,19 @@
       (is (= ts (:timestamp item)) "Item should have been time-stamped")
       (is (= 9001 (:time item)) "Time should have increased")
       ))
+  (testing "Attempting to add time to an invalid URL causes no changes"
+    (let [tab    {:url        nil
+                  :title      "Numergent limited"
+                  :favIconUrl "http://numergent.com/favicon.png"}
+          ts     12345
+          result (data/track-url-time (:url-times test-db) tab 9001 ts)]
+      (is (= result (:url-times test-db))))
+    (let [tab    {:url ""}
+          ts     12345
+          result (data/track-url-time (:url-times test-db) tab 9001 ts)]
+      (is (= result (:url-times test-db)))
+      )
+    )
   )
 
 

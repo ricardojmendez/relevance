@@ -54,10 +54,12 @@
   "Shortens a URL to remove anchor and protocol, and returns an integer based on
   the result."
   [url]
-  (let [element   (-> (dommy/create-element :a)
-                      (dommy/set-attr! :href url))
-        shortened (str (.toLowerCase (.-host element)) (.-pathname element) (.-search element))]
-    (hash-string shortened)))
+  (if (not-empty url)
+    (let [element   (-> (dommy/create-element :a)
+                        (dommy/set-attr! :href url))
+          shortened (str (.toLowerCase (.-host element)) (.-pathname element) (.-search element))]
+      (hash-string shortened))
+    0))
 
 
 (defn time-display

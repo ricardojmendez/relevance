@@ -9,17 +9,17 @@
   [url-times tab time timestamp]
   (let [url      (or (:url tab) "")
         id       (url-key url)
-        url-time (or (get url-times id)
+        url-item (or (get url-times id)
                      {:url       url
                       :time      0
                       :timestamp 0})
         track?   (not= 0 id)
-        new-time (assoc url-time :time (+ (:time url-time) time)
+        new-item (assoc url-item :time (+ (:time url-item) time)
                                  :title (:title tab)
                                  :timestamp timestamp)]
     (if track?
-      (assoc url-times id new-time)
-      url-time)))
+      (assoc url-times id new-item)
+      url-times)))
 
 
 (defn track-site-time
@@ -30,14 +30,14 @@
   [site-times tab time timestamp]
   (let [host      (hostname (or (:url tab) ""))
         id        (host-key host)
-        site-time (or (get site-times id)
+        site-item (or (get site-times id)
                       {:host      host
                        :time      0
                        :timestamp 0})
         track?    (not= 0 id)
-        new-time  (assoc site-time :time (+ (:time site-time) time)
+        new-item  (assoc site-item :time (+ (:time site-item) time)
                                    :favIconUrl (:favIconUrl tab)
                                    :timestamp timestamp)]
     (if track?
-      (assoc site-times id new-time)
+      (assoc site-times id new-item)
       site-times)))
