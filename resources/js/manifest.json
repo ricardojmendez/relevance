@@ -1,5 +1,6 @@
 {
-  "name": "Relevance",
+  "name": "Relevance - Personal tab organizer",
+  "short_name": "Relevance",
   "version": "0.3",
   "browser_action": {
     "default_title": "Show history",
@@ -31,4 +32,3 @@
   ],
   "manifest_version": 2
 }
-
