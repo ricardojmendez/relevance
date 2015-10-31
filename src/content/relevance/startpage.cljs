@@ -33,7 +33,7 @@
           (dommy/append! (doto
                            (dommy/create-element :img)
                            (dommy/set-attr! :src "http://numergent.com/images/relevance/icon38.png")))
-          (dommy/append! (create-node :span "[time viewed: " "rgb(80, 99, 152)"))
+          (dommy/append! (create-node :span "[viewed: " "rgb(80, 99, 152)"))
           (dommy/append! (create-node :span (time-display time) "rgb(140, 101, 153)"))
           (dommy/append! (create-node :span "]" "rgb(80, 99, 152)"))
           ))
