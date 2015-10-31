@@ -52,6 +52,15 @@
                                :host       "www.kitco.com"}}})
 
 
+(deftest test-host-key
+  ;;Test the host-key function against known values
+  (are [host key] (= (utils/host-key host) key)
+                  "numergent.com" 971841386
+                  "google.com" -1536293812
+                  "startpage.com" 920793092
+                  "" 0
+                  nil 0))
+
 
 (deftest test-track-url-time
   (testing "Add time to an existing tab"
@@ -113,6 +122,7 @@
       (is (= 9001 (:time item)) "Time should have increased")
       ))
   )
+
 
 (deftest test-track-site-time
   (testing "Add time to an empty database"
@@ -181,3 +191,5 @@
         ))
     )
   )
+
+
