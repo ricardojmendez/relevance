@@ -78,7 +78,7 @@
     ;; Fake a ::storage-changed message to load the data from storage
     (go (dispatch [::storage-changed {:changes {:data {:newValue (:data (<! (storage/get)))}}}]))
     {:app-state {}
-     :ui-state  {:section :url-times}}))
+     :ui-state  {:section :intro}}))
 
 
 (register-handler
@@ -133,6 +133,7 @@
          [:a {:class "navbar-brand" :href "http://numergent.com" :target "_blank"} "Relevance"]]
         [:div {:class "collapse navbar-collapse", :id "bs-example-navbar-collapse-1"}
          [:ul {:class "nav navbar-nav"}
+          [navbar-item "Introduction" :intro @section]
           [navbar-item "Times per page" :url-times @section]
           [navbar-item "Times per site" :site-times @section]
           ]
@@ -206,6 +207,33 @@
         ]])
     ))
 
+(defn div-intro []
+  [:div {:class "col-sm-10 col-sm-offset-1"}
+   [:div {:class "page-header"}
+    [:h1 "Introduction"]]
+
+   [:h2 "Thanks for installing Relevance."]
+   [:p "I'm a tab-aholic. I normally do a search, start opening the tabs that seem interesting, and then as I flip through them, I end up opening even more links on tabs as they seem relevant."]
+   [:p "Next thing I know I have a huge mess of tabs, and it's hard to remember which one I've read, or which one is more relevant."]
+   [:p "I wrote Relevance to help manage that."]
+   [:p "When you install Relevance, it'll keep track of the pages you actually read, and how long you spend reading them. This information is kept completely private, on your local browser. As you open tabs, its knowledge of what's important to you grows, and when you activate it by pressing the button, the tabs  for your current window are ordered depending on how long you have spent reading them."]
+   [:p "This ordering creates a natural arrangement where the tabs you have spent the longest on, which are expected to be the most relevant, are placed first, and the ones you haven't read at all are shunted to the end."]
+   [:p "I've found this very useful in organizing what I should be focusing on."]
+   [:h2 "Preview software"]
+   [:p "Relevance is a software preview, and I'll be happy to hear your comments. If you have any suggestions on what you think might make Relevance better, "
+    [:a {:href "https://twitter.com/intent/tweet?text=Hey%20@argesric%20about%20&hashtags=relevance" :target "_blank"}
+     "please reach out on Twitter"]
+    "."
+    ]
+   [:h2 "Experimental StartPage integration"]
+   [:p "Ever ran into a situation where you re-do a search, but can't remember which ones were the most important links?"]
+   [:p "This version of Relevance has a pre-release integration with "
+    [:a {:href "https://startpage.com" :target "_blank"} "StartPage"]
+    ". After you run a search, it'll look at the results on your current page and re-prioritize the links shown to bring to the front those you have spent the longest reading."]
+   [:p "Every search engine behaves differently, so if there's enough interest, I could extend this integration to others as well."]
+   ]
+  )
+
 (defn div-sitetimes []
   (let [site-times (subscribe [:data :site-times])
         sites      (reaction (vals @site-times))
@@ -271,6 +299,7 @@
 
 (def component-dir {:export     data-export
                     :import     data-import
+                    :intro      div-intro
                     :url-times  div-urltimes
                     :site-times div-sitetimes})
 
