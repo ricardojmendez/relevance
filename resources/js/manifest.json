@@ -24,7 +24,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://*.startpage.com/*", "https://duckduckgo.com/*"],
+      "matches": ["https://*.startpage.com/*"],
       "run_at": "document_end",
       "js": ["content.js"]
     }
