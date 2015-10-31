@@ -216,7 +216,7 @@
     [:p "I'm a tab-aholic. I normally do a search, start opening the tabs that seem interesting, and then as I flip through them, I end up opening even more links on tabs as they seem relevant."]
     [:p "Next thing I know I have a huge mess of tabs, and it's hard to remember which one I've read, or which one is more relevant."]
     [:p "I wrote Relevance to help manage that."]
-    [:p "When you install Relevance, it'll keep track of the pages you actually read, and how long you spend reading them. This information is kept completely private, on your local browser. As you open tabs, its knowledge of what's important to you grows, and when you activate it by pressing the button, the tabs  for your current window are ordered depending on how long you have spent reading them."]
+    [:p "When you install Relevance, it'll keep track of the pages you actually read, and how long you spend reading them. This information is kept completely private, on your local browser. As you open tabs, its knowledge of what's important to you grows, and when you activate it, the tabs  for your current window are ordered depending on how long you have spent reading them."]
     [:p "This ordering creates a natural arrangement where the tabs you have spent the longest on, which are expected to be the most relevant, are placed first, and the ones you haven't read at all are shunted to the end."]
     [:p "I've found this very useful in organizing what I should be focusing on."]]
    [:div {:class "col-sm-10 col-sm-offset-1"}
@@ -239,13 +239,13 @@
      [:div {:class "col-sm-12"}
       [:strong "Before"]]
      [:div {:class "col-sm-12"}
-      [:img {:src "http://numergent.com/images/relevance/relevance-clojure chrome before.png"}]]
+      [:img {:src "http://numergent.com/images/relevance/relevance-0.3-clojure chrome before.png"}]]
      ]
     [:div {:class "col-sm-6"}
      [:div {:class "col-sm-12"}
       [:strong "After"]]
      [:div {:class "col-sm-12"}
-      [:img {:src "http://numergent.com/images/relevance/relevance-clojure chrome after.png"}]]
+      [:img {:src "http://numergent.com/images/relevance/relevance-0.3-clojure chrome after.png"}]]
      ]]
    ]
   )
