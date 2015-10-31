@@ -14,7 +14,7 @@
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
             [khroma.extension :as ext]
             [khroma.browser-action :as browser]
-            )
+            [khroma.storage :as storage])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 
@@ -120,7 +120,16 @@
       (dispatch [:data-load (<! (io/load))])
       (dispatch [::window-focus {:windowId (:id (<! (windows/get-last-focused {:populate false})))}])
       ;; We should only hook to the channels once, so we do it during the :initialize handler
-      (hook-to-channels))
+      (hook-to-channels)
+      ;; Finally, if it's the first time on this version, show the intro page
+      ;; We could probably hook to on-installed,
+      (let [version    (get @runtime/manifest "version")
+            last-shown (:last-initialized (<! (storage/get :last-initialized)))]
+        (when (not= version last-shown)
+          (open-results-tab)
+          (storage/set {:last-initialized version}))
+        )
+      )
     {:app-state {}}))
 
 
