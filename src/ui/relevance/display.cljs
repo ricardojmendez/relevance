@@ -1,13 +1,15 @@
-(ns booklet.display
-  (:require [booklet.utils :refer [on-channel from-transit time-display]]
+(ns relevance.display
+  (:require [relevance.utils :refer [on-channel from-transit time-display host-key hostname]]
             [cljs.core.async :refer [>! <!]]
             [cljs.core :refer [random-uuid]]
             [cljsjs.react-bootstrap]
             [khroma.idle :as idle]
             [khroma.log :as console]
+            [khroma.runtime :as runtime]
             [khroma.storage :as storage]
             [reagent.core :as reagent]
-            [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]])
+            [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
+            [relevance.io :as io])
   (:require-macros [cljs.core :refer [goog-define]]
                    [cljs.core.async.macros :refer [go go-loop]]
                    [reagent.ratom :refer [reaction]]))
@@ -23,6 +25,7 @@
 
 ;; Application data, will be saved
 (register-sub :data general-query)
+(register-sub :raw-data general-query)
 ;; Transient data items
 (register-sub :ui-state general-query)
 (register-sub :app-state general-query)
@@ -58,12 +61,24 @@
 
 
 (register-handler
+  :data-import
+  (fn [app-state [_ transit-data]]
+    ;; We actually just need to save it, since ::storage-changed takes care
+    ;; of loading it and importing it.
+    (io/save-raw transit-data #(runtime/send-message :reload-data))
+    (-> app-state
+        (assoc-in [:ui-state :section] :url-times)
+        (assoc-in [:app-state :import] nil))
+    ))
+
+
+(register-handler
   ::initialize
   (fn [_]
     ;; Fake a ::storage-changed message to load the data from storage
     (go (dispatch [::storage-changed {:changes {:data {:newValue (:data (<! (storage/get)))}}}]))
     {:app-state {}
-     :ui-state  {:section :time-track}}))
+     :ui-state  {:section :intro}}))
 
 
 (register-handler
@@ -78,7 +93,7 @@
     (let [new-value (get-in message [:changes :data :newValue])
           data      (from-transit new-value)]
       (if (not-empty data)
-        (assoc app-state :data data)
+        (assoc app-state :data data :raw-data new-value)
         app-state
         ))
     ))
@@ -115,15 +130,17 @@
           [:span {:class "icon-bar"}]
           [:span {:class "icon-bar"}]
           [:span {:class "icon-bar"}]]
-         [:a {:class "navbar-brand" :href "http://numergent.com" :target "_new"} "Booklet"]]
+         [:a {:class "navbar-brand" :href "http://numergent.com" :target "_blank"} "Relevance"]]
         [:div {:class "collapse navbar-collapse", :id "bs-example-navbar-collapse-1"}
          [:ul {:class "nav navbar-nav"}
-          [navbar-item "Times" :time-track @section]
+          [navbar-item "Introduction" :intro @section]
+          [navbar-item "Times per page" :url-times @section]
+          [navbar-item "Times per site" :site-times @section]
           ]
-         [:form {:class "navbar-form navbar-left", :role "search"}
-          [:div {:class "form-group"}
-           [:input {:type "text", :class "form-control", :placeholder "Search"}]]
-          [:button {:type "submit", :class "btn btn-default"} "Submit"]]
+         #_[:form {:class "navbar-form navbar-left", :role "search"}
+            [:div {:class "form-group"}
+             [:input {:type "text", :class "form-control", :placeholder "Search"}]]
+            [:button {:type "submit", :class "btn btn-default"} "Submit"]]
          [:ul {:class "nav navbar-nav navbar-right"}
           [navbar-item "Export" :export @section]
           [navbar-item "Import" :import @section]]]]])))
@@ -151,14 +168,13 @@
                   :on-click (:action @modal-info)} (:action-label @modal-info)]
         ]])))
 
-(defn list-urls [tabs]
+(defn list-urls [urls site-data]
   (->>
-    tabs
-    (sort-by :index)
+    urls
     (map-indexed
       (fn [i tab]
         (let [url     (:url tab)
-              favicon (:favIconUrl tab)]
+              favicon (:favIconUrl (get site-data (host-key (hostname url))))]
           ^{:key i}
           [:tr
            [:td {:class "col-sm-1"} (time-display (:time tab))]
@@ -172,8 +188,9 @@
            [:td {:class "col-sm-5"} url]])))))
 
 
-(defn div-timetrack []
+(defn div-urltimes []
   (let [url-times  (subscribe [:data :url-times])
+        site-times (subscribe [:data :site-times])
         url-values (reaction (filter-tabs (vals @url-times)))
         to-list    (reaction (sort-by #(* -1 (:time %)) @url-values))]
     (fn []
@@ -186,23 +203,95 @@
           [:th "Title"]
           [:th "URL"]]]
         [:tbody
-         (list-urls @to-list)]
+         (list-urls @to-list @site-times)]
+        ]])
+    ))
+
+(defn div-intro []
+  [:div
+   [:div {:class "page-header col-sm-10 col-sm-offset-1"}
+    [:h1 "Welcome!"]]
+   [:div {:class "col-sm-10 col-sm-offset-1"}
+    [:h2 "Thanks for installing Relevance"]
+    [:p "I'm a tab-aholic. I normally do a search, start opening the tabs that seem interesting, and then as I flip through them, I end up opening even more links on tabs as they seem relevant."]
+    [:p "Next thing I know I have a huge mess of tabs, and it's hard to remember which one I've read, or which one is more relevant."]
+    [:p "I wrote Relevance to help manage that."]
+    [:p "When you install Relevance, it'll keep track of the pages you actually read, and how long you spend reading them. This information is kept completely private, on your local browser. As you open tabs, its knowledge of what's important to you grows, and when you activate it, the tabs  for your current window are ordered depending on how long you have spent reading them."]
+    [:p "This ordering creates a natural arrangement where the tabs you have spent the longest on, which are expected to be the most relevant, are placed first, and the ones you haven't read at all are shunted to the end."]
+    [:p "I've found this very useful in organizing what I should be focusing on."]]
+   [:div {:class "col-sm-10 col-sm-offset-1"}
+    [:h2 "Preview software"]
+    [:p "Relevance is a software preview, and I'll be happy to hear your comments. If you have any suggestions on what you think might make Relevance better, "
+     [:a {:href "https://twitter.com/intent/tweet?text=Hey%20@argesric%20about%20&hashtags=relevance" :target "_blank"}
+      "please reach out on Twitter"]
+     " or "
+     [:a {:href "http://numergent.com/#contact"} "through our site"]
+     "."]]
+   [:div {:class "col-sm-10 col-sm-offset-1"}
+    [:h2 "Experimental StartPage integration"]
+    [:p "Ever ran into a situation where you re-do a search, but can't remember which ones were the most important links?"]
+    [:p "This version of Relevance has an experimental integration with "
+     [:a {:href "https://startpage.com" :target "_blank"} "StartPage"]
+     ". After you run a search, it'll look at the results on your current page and re-prioritize the links shown to bring to the front those you have spent the longest reading."]
+    [:p "Every search engine behaves differently, so if there's enough interest, I could extend this integration to others as well."]]
+   [:div
+    [:div {:class "col-sm-6"}
+     [:div {:class "col-sm-12"}
+      [:strong "Before"]]
+     [:div {:class "col-sm-12"}
+      [:img {:src "http://numergent.com/images/relevance/relevance-0.3-clojure chrome before.png"}]]
+     ]
+    [:div {:class "col-sm-6"}
+     [:div {:class "col-sm-12"}
+      [:strong "After"]]
+     [:div {:class "col-sm-12"}
+      [:img {:src "http://numergent.com/images/relevance/relevance-0.3-clojure chrome after.png"}]]
+     ]]
+   ]
+  )
+
+(defn div-sitetimes []
+  (let [site-times (subscribe [:data :site-times])
+        sites      (reaction (vals @site-times))
+        to-list    (reaction (sort-by #(* -1 (:time %)) @sites))]
+    (fn []
+      [:div
+       [:div {:class "page-header"} [:h2 "Times"]]
+       [:table {:class "table table-striped table-hover"}
+        [:thead
+         [:tr
+          [:th "#"]
+          [:th "Site"]]]
+        [:tbody
+         (->>
+           @to-list
+           (map-indexed
+             (fn [i site]
+               (let [url     (:host site)
+                     favicon (:favIconUrl site)]
+                 ^{:key i}
+                 [:tr
+                  [:td {:class "col-sm-1"} (time-display (:time site))]
+                  [:td {:class "col-sm-6"} (if favicon
+                                             [:img {:src    favicon
+                                                    :width  16
+                                                    :height 16}])
+                   url]
+                  ]))))]
         ]])
     ))
 
 
 (defn data-export []
-  (let [data      (subscribe [:data])
-        as-string (reaction (.stringify js/JSON (clj->js @data) nil 2))]
+  (let [data (subscribe [:raw-data])]
     (fn []
       [:div
        [:div {:class "page-header"} [:h2 "Current data"]]
-       [:p (str "Copy the JSON below to a safe location. Size: " (count @as-string))]
+       [:p (str "Copy the text below to a safe location. Size: " (count @data))]
        [:textarea {:class     "form-control"
                    :rows      30
                    :read-only true
-                   ;; We will not export the current tab list
-                   :value     @as-string}
+                   :value     @data}
         ]
        ])))
 
@@ -214,7 +303,7 @@
        [:div {:class "page-header"} [:h2 "Import data"]]
        [:div {:class "alert alert-warning"}
         [:h4 "Warning!"]
-        [:p "Any data item for which there is a key on the JSON below be replaced!"]]
+        [:p "Your entire data will be replaced with the information below."]]
        [:textarea {:class     "form-control"
                    :rows      30
                    :value     @import-data
@@ -226,7 +315,9 @@
 
 (def component-dir {:export     data-export
                     :import     data-import
-                    :time-track div-timetrack})
+                    :intro      div-intro
+                    :url-times  div-urltimes
+                    :site-times div-sitetimes})
 
 
 (defn main-section []

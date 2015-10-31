@@ -1,42 +1,49 @@
-(defproject booklet-chrome "0.2.0"
+(defproject relevance-chrome "0.3.0"
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.145"]
-                 [org.clojure/core.async "0.1.346.0-17112a-alpha"]
+                 [org.clojure/core.async "0.2.371"]
                  [com.cognitect/transit-cljs "0.8.225"]
                  [cljsjs/react-bootstrap "0.25.2-0" :exclusions [org.webjars.bower/jquery]]
                  [khroma "0.2.0-SNAPSHOT"]
+                 [lein-doo "0.1.6-SNAPSHOT"]
                  [prismatic/dommy "1.1.0"]
                  [re-frame "0.4.1" :exclusions [cljsjs/react]]
                  ]
   :source-paths ["src/ui" "src/common" "src/background" "src/content"]
+  :test-paths ["test"]
 
   :plugins [[lein-cljsbuild "1.1.0"]
-            [lein-chromebuild "0.3.0"]]
+            [lein-chromebuild "0.3.0"]
+            [lein-doo "0.1.6-SNAPSHOT"]
+            ]
+
+  :doo {:build "test"}
 
   :cljsbuild {:builds
               {:background
                {:source-paths ["src/background" "src/common"]
                 :compiler     {:output-to     "target/unpacked/background.js"
                                :output-dir    "target/js/background"
-                               :main          "booklet.background"
+                               :main          "relevance.background"
                                :optimizations :whitespace
                                :pretty-print  true}}
                :content
                {:source-paths ["src/content" "src/common"]
                 :compiler     {:output-to     "target/unpacked/content.js"
                                :output-dir    "target/js/content"
-                               :main          "booklet.startpage"
+                               :main          "relevance.startpage"
                                :optimizations :whitespace
                                :pretty-print  true}}
                :ui
                {:source-paths ["src/ui" "src/common"]
                 :compiler     {:output-to     "target/unpacked/ui.js"
                                :output-dir    "target/js/ui"
-                               :main          "booklet.display"
+                               :main          "relevance.display"
                                :optimizations :whitespace
-                               :pretty-print  true}}}
+                               :pretty-print  true}}
+               }
 
               }
 
@@ -54,6 +61,16 @@
                 :content    {:compiler {:optimizations :advanced
                                         :pretty-print  false}}
                 :ui         {:compiler {:optimizations :advanced
-                                        :pretty-print  false}}}}
-
-              }})
+                                        :pretty-print  false}}}}}
+             :test
+             {:cljsbuild
+              {:builds
+               {:test
+                {:source-paths ["test" "src/common"]
+                 :compiler     {:output-to     "target/js/test/relevance-tests.js"
+                                :output-dir    "target/js/test"
+                                :main          relevance.test.runner
+                                :optimizations :none
+                                :pretty-print  :true}}}}
+              }
+             })

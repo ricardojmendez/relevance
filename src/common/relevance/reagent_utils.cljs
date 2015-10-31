@@ -1,4 +1,4 @@
-(ns booklet.reagent-utils
+(ns relevance.reagent-utils
   (:require [reagent.core :as reagent]))
 
 (def initial-focus-wrapper

@@ -1,4 +1,4 @@
-(ns booklet.shared-handlers
+(ns relevance.shared-handlers
   (:require [khroma.log :as console]
             [re-frame.core :refer [register-handler]]))
 

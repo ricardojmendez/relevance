@@ -1,18 +1,20 @@
-(ns booklet.background
-  (:require [clojure.set :refer [difference]]
-            [cljs.core.async :refer [>! <!]]
-            [booklet.utils :refer [on-channel from-transit to-transit key-from-url]]
+(ns relevance.background
+  (:require [cljs.core.async :refer [>! <!]]
+            [relevance.data :as data]
+            [relevance.io :as io]
+            [relevance.migrations :as migrations]
+            [relevance.utils :refer [on-channel url-key host-key hostname is-http?]]
             [khroma.alarms :as alarms]
             [khroma.context-menus :as menus]
             [khroma.idle :as idle]
             [khroma.log :as console]
-            [khroma.storage :as storage]
             [khroma.tabs :as tabs]
             [khroma.runtime :as runtime]
             [khroma.windows :as windows]
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
             [khroma.extension :as ext]
-            [khroma.browser-action :as browser])
+            [khroma.browser-action :as browser]
+            [khroma.storage :as storage])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 
@@ -23,14 +25,12 @@
 
 
 (def window-alarm "window-alarm")
+(def non-http-penalty 0.05)
+(def relevant-tab-keys [:windowId :id :active :url :start-time :title :favIconUrl])
+(def select-tab-keys #(select-keys % relevant-tab-keys))
 
 (defn now [] (.now js/Date))
 
-
-(def relevant-tab-keys [:windowId :id :active :url :start-time :title :favIconUrl])
-
-(def select-tab-keys #(select-keys % relevant-tab-keys))
-(def url-time-path [:data :url-times])
 
 ;;;;-------------------------------------
 ;;;; Functions
@@ -55,8 +55,14 @@
   don't end up receiving events when we don't yet have the environment
   set up to handle them."
   []
-  (on-channel alarms/on-alarm dispatch-sync ::on-alarm)
-  (on-channel browser/on-clicked dispatch-sync ::on-clicked-button)
+  ;; We should use dispatch for anything that does not absolutely require
+  ;; immediate handling, to avoid interferring with the regular initialization
+  ;; and event flow.  On this case, I' using it only for log-content,
+  ;; which has no effect on app-state, and for on-suspend, which we want to
+  ;; handle immediately.
+  (on-channel alarms/on-alarm dispatch ::on-alarm)
+  (on-channel browser/on-clicked dispatch ::on-clicked-button)
+  (on-channel runtime/on-message dispatch ::on-message)
   (on-channel runtime/on-suspend dispatch-sync :suspend)
   (on-channel runtime/on-suspend-canceled dispatch-sync :log-content)
   (on-channel tabs/on-activated dispatch ::tab-activated)
@@ -77,11 +83,23 @@
           (tabs/create {:url ext-url})))))
 
 
-(defn sort-tabs! [window-id url-times]
+
+(defn time-score [tab url-times site-times]
+  (let [url       (:url tab)
+        idx       (:index tab)
+        tab-time  (:time (get url-times (url-key url)))
+        site-time (:time (get site-times (host-key (hostname url))))
+        total     (+ tab-time site-time)
+        score     (if (is-http? url) total (* total non-http-penalty))
+        ]
+    (or (when tab-time score)
+        (- 2000 idx))))
+
+(defn sort-tabs! [window-id data]
   (go
-    (let [tabs (->> (:tabs (<! (windows/get window-id)))
-                    (map #(assoc % :time (or (:time (get url-times (key-from-url (:url %))))
-                                             (- 2000 (:index %)))))
+    (let [{:keys [url-times site-times]} data
+          tabs (->> (:tabs (<! (windows/get window-id)))
+                    (map #(assoc % :time (time-score % url-times site-times)))
                     (sort-by #(* -1 (:time %)))
                     (map-indexed #(hash-map :index %1
                                             :id (:id %2))))]
@@ -99,65 +117,48 @@
   ::initialize
   (fn [_]
     (go
-      (dispatch [:data-import (:data (<! (storage/get))) true])
+      (dispatch [:data-load (<! (io/load))])
       (dispatch [::window-focus {:windowId (:id (<! (windows/get-last-focused {:populate false})))}])
-      (dispatch [:idle-state-change {:newState (<! (idle/query-state 30))}]))
-    {:app-state    {}
-     :hookup-done? false}))
-
-
-;; :data-import currently gets dispatched from both booklet.core
-;; and booklet.background, not entirely happy with that. Needs
-;; further clean up
-(register-handler
-  :data-import
-  (fn [app-state [_ transit-data]]
-    (let [new-data (from-transit transit-data)]
-      (console/trace "New data on import" new-data)
-      ;; Create a new id if we don't have one
-      (when (empty? (:instance-id new-data))
-        (dispatch [:data-set :instance-id (.-uuid (random-uuid))]))
-      ;; Dispatch instead of just doing an assoc so that it's also saved
-      (doseq [[key item] new-data]
-        (dispatch [:data-set key item]))
-      ;; Once we've dispatched these, let's dispatch evaluate the state
-      (dispatch [:data-import-done])
-      ;; We should only hook to the channels once.
-      (when (not (:hookup-done? app-state))
-        (hook-to-channels))
-      (-> app-state
-          (assoc-in [:ui-state :section] :time-track)
-          (assoc-in [:app-state :import] nil)
-          (assoc :hookup-done? true)
-          (assoc :data new-data))
-      )))
-
-
-(register-handler
-  :data-import-done
-  (fn [app-state [_]]
-    (let [suspend-info (get-in app-state [:data :suspend-info])
-          old-tab      (:active-tab suspend-info)
-          current-tab  (:active-tab app-state)
-          is-same?     (and (= (:id old-tab) (:id current-tab))
-                            (= (:url old-tab) (:url current-tab))
-                            (= (:windowId old-tab) (:windowId current-tab)))]
-      (console/trace "From suspend:" is-same? suspend-info)
-      (if is-same?
-        (dispatch [:handle-activation old-tab (:start-time old-tab)])
-        (dispatch [:handle-deactivation old-tab (:time suspend-info)]))
-      (dispatch [:data-set :suspend-info] nil)
-      app-state
+      ;; We should only hook to the channels once, so we do it during the :initialize handler
+      (hook-to-channels)
+      ;; Finally, if it's the first time on this version, show the intro page
+      ;; We could probably hook to on-installed,
+      (let [version    (get @runtime/manifest "version")
+            last-shown (:last-initialized (<! (storage/get :last-initialized)))]
+        (when (not= version last-shown)
+          (open-results-tab)
+          (storage/set {:last-initialized version}))
+        )
       )
-    ))
+    {:app-state {}}))
+
+
+(register-handler
+  :data-load
+  (fn [app-state [_ loaded]]
+    (let [new-data (migrations/migrate-to-latest loaded)]
+      (console/trace "Data load" loaded "migrated" new-data)
+      ;; Save the migrated data we just received
+      (io/save new-data)
+      ;; Process the suspend info
+      (let [suspend-info (:suspend-info new-data)
+            old-tab      (:active-tab suspend-info)
+            current-tab  (:active-tab app-state)
+            is-same?     (and (= (:id old-tab) (:id current-tab))
+                              (= (:url old-tab) (:url current-tab))
+                              (= (:windowId old-tab) (:windowId current-tab)))]
+        (if is-same?
+          (dispatch [:handle-activation old-tab (:start-time old-tab)])
+          (dispatch [:handle-deactivation old-tab (:time suspend-info)])))
+      (-> app-state
+          (assoc :data (dissoc new-data :suspend-info))))))
 
 
 (register-handler
   :data-set
   (fn [app-state [_ key item]]
-    (let [new-state    (assoc-in app-state [:data key] item)
-          transit-data (to-transit (:data new-state))]
-      (storage/set {:data transit-data})
+    (let [new-state (assoc-in app-state [:data key] item)]
+      (io/save (:data new-state))
       new-state)
     ))
 
@@ -182,8 +183,7 @@
     ;; was deactivated (which defaults to now)
     [app-state [_ tab end-time]]
     (console/trace " Deactivating " tab)
-    (when (or (:active tab)
-              (< 0 (:start-time tab)))
+    (when (< 0 (:start-time tab))
       (dispatch [:track-time tab (- (or end-time (now))
                                     (:start-time tab))]))
     app-state))
@@ -225,6 +225,10 @@
 (register-handler
   ::on-clicked-button
   (fn [app-state [_ {:keys [tab]}]]
+    ;; Force it to track the time up until now
+    (let [active-tab (:active-tab app-state)]
+      (dispatch [:handle-deactivation active-tab])
+      (dispatch [:handle-activation active-tab]))
     (dispatch [:on-relevance-sort-tabs tab])
     app-state
     ))
@@ -233,6 +237,15 @@
   ::on-clicked-menu
   (fn [app-state [_ {:keys [info tab]}]]
     (dispatch [(keyword (:menuItemId info)) tab])
+    app-state
+    ))
+
+(register-handler
+  ::on-message
+  (fn [app-state [_ {:keys [message sender]}]]
+    ; (console/log "GOT INTERNAL MESSAGE" message "from" sender)
+    (condp = (keyword message)
+      :reload-data (go (dispatch [:data-load (<! (io/load))])))
     app-state
     ))
 
@@ -247,7 +260,7 @@
 (register-handler
   :on-relevance-sort-tabs
   (fn [app-state [_ tab]]
-    (sort-tabs! (:windowId tab) (get-in app-state url-time-path))
+    (sort-tabs! (:windowId tab) (:data app-state))
     app-state))
 
 
@@ -266,7 +279,6 @@
     (let [{:keys [tabId windowId]} activeInfo
           active-tab (:active-tab app-state)
           replace?   (= windowId (:windowId active-tab))]
-      ; (console/trace ::tab-activated tabId windowId replace? active-tab)
       (if replace?
         (do
           (dispatch [:handle-deactivation active-tab])
@@ -279,7 +291,6 @@
 (register-handler
   ::tab-updated
   (fn [app-state [_ {:keys [tabId tab]}]]
-    ; (console/trace ::tab-updated (:title tab) tabId tab (:active-tab app-state))
     (let [active-tab (:active-tab app-state)
           are-same?  (= tabId (:id active-tab))]
       (when (and are-same?
@@ -303,25 +314,13 @@
 (register-handler
   :track-time
   (fn [app-state [_ tab time]]
-    (let [url-times (or (get-in app-state url-time-path) {})
-          url       (or (:url tab) "")
-          url-key   (key-from-url url)
-          url-time  (or (get url-times url-key)
-                        {:url       (:url tab)
-                         :time      0
-                         :timestamp 0})
-          ;; Don't track two messages too close together
-          track?    (and (not= 0 url-key)
-                         (< 100 (- (now) (:timestamp url-time))))
-          new-time  (assoc url-time :time (+ (:time url-time) time)
-                                    :title (:title tab)
-                                    :favIconUrl (:favIconUrl tab)
-                                    :timestamp (now))]
-      (console/trace time track? " milliseconds spent at " url-key tab)
-      ; (console/trace " Previous " url-time)
-      (when track?
-        (dispatch [:data-set :url-times (assoc url-times url-key new-time)]))
-      app-state
+    (let [data       (:data app-state)
+          url-times  (data/track-url-time (or (:url-times data) {}) tab time (now))
+          site-times (data/track-site-time (or (:site-times data) {}) tab time (now))
+          new-data   (assoc data :url-times url-times :site-times site-times)]
+      (console/trace time " milliseconds spent at " tab)
+      (io/save new-data)
+      (assoc app-state :data new-data)
       )))
 
 (register-handler
@@ -360,7 +359,6 @@
       (>! content :background-ack)
       (recur connections)))
   )
-
 
 
 (defn ^:export main []

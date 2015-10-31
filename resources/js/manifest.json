@@ -1,6 +1,7 @@
 {
-  "name": "Relevance",
-  "version": "0.2.1",
+  "name": "Relevance - Personal tab organizer",
+  "short_name": "Relevance",
+  "version": "0.3",
   "browser_action": {
     "default_title": "Show history",
     "default_icon": {
@@ -14,7 +15,7 @@
     "128": "icon128.png"
   },
   "permissions": [
-    "tabs", "storage", "idle", "alarms", "contextMenus"
+    "tabs", "storage", "idle", "alarms", "contextMenus", "unlimitedStorage"
   ],
   "background": {
     "scripts": [
@@ -24,11 +25,10 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://*.startpage.com/*", "https://duckduckgo.com/*"],
+      "matches": ["https://*.startpage.com/*"],
       "run_at": "document_end",
       "js": ["content.js"]
     }
   ],
   "manifest_version": 2
 }
-
