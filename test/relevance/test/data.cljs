@@ -190,6 +190,15 @@
         (is (= (val other) (get (:site-times test-db) (key other))) "Other items should have remained untouched")
         ))
     )
+  (testing "Add time from an invalid tab does not change the databse"
+    (let [tab    {}
+          ts     1445964037920
+          result (data/track-site-time (:site-times test-db)
+                                       tab
+                                       9001
+                                       ts)]
+      (is result)
+      (is (= result (:site-times test-db)))))
   )
 
 

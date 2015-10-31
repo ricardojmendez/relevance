@@ -55,7 +55,8 @@
       (is (= without-id {:data-version 1, :url-times {}, :site-times {}}))
       ))
   (testing "v1 migration"
-    (let [v1 (migrations/migrate base-data)]
+    (let [v1 (migrations/migrate base-data)
+          v2 (migrations/migrate v1)]
       (is (not= v1 base-data))
       (is (= 5 (count v1)) "We should have received five keys")
       (are [k] (some? (k v1)) :url-times :instance-id :data-version :site-times)
@@ -70,9 +71,18 @@
                                -1466097211 {:host "lanyrd.com" :time 5617 :favIconUrl nil}
                                -915908674  {:host "www.kitco.com" :time 4432 :favIconUrl nil}})
           "Site data should have been aggregated")
+      ;; Test v2 migration
+      ;; Moving from v1 to v2 retains all data, but loses the favIconUrl for the sites, since
+      ;; we no longer have them on the original
+      (is (= v2 (-> v1
+                    (assoc :data-version 2)
+                    (assoc :site-times (into {} (map #(vector (key %)
+                                                              (assoc (val %):favIconUrl nil))
+                                                     (:site-times v1))))
+                    )))
       ;; Test recurrent migration
-      (is (= v1 (migrations/migrate-to-latest base-data)) "Migrating all the way to the latest should yield the same v1 data")
-      (is (= v1 (migrations/migrate-to-latest v1)) "Migrating all the way to the latest should yield the same v1 data")
+      (is (= v2 (migrations/migrate-to-latest base-data)) "Migrating all the way to the latest should yield the same v2 data")
+      (is (= v2 (migrations/migrate-to-latest v1)) "Migrating all the way to the latest should yield the same v2 data")
       (is (not= base-data (migrations/migrate-to-latest base-data)) "Migration loop should have returned a different data set")
       ))
   )

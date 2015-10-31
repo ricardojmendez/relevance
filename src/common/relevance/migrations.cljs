@@ -27,6 +27,10 @@
                                                    (dissoc (val %) :favIconUrl))
                                           (:url-times data))))
           (assoc :site-times (accumulate-site-times (:url-times data))))
+    1 (->
+        data
+        (assoc :data-version 2)
+        (assoc :site-times (accumulate-site-times (:url-times data))))
     data
     ))
 

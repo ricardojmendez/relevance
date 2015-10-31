@@ -40,4 +40,4 @@
                                    :timestamp timestamp)]
     (if track?
       (assoc site-times id new-time)
-      site-time)))
+      site-times)))
