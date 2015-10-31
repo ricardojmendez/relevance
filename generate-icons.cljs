@@ -14,19 +14,14 @@
 (defn do! [& args]
       (ensure-succeeded! (apply sh args)))
 
-(def path "resources/images/")
+(def src-path "resources/")
+(def dst-path "resources/images/")
 (def sizes [16 19 38 48 128])
-
-
-; TODO: Once we get planck 1.6, add command line args so that we can do either
-; release or start
-
-; (do! "git" "flow" "release" "start" timestamp)
 
 (defn do-resize! [filename]
       (doseq [size sizes]
-             (let [origin (str path filename)
-                   target (str path "icon" size ".png")]
+             (let [origin (str src-path filename)
+                   target (str dst-path "icon" size ".png")]
                   (println "Converting" origin "to" target)
                   (do! "convert" origin "-resize" (str size "x" size) target)
                   )))
