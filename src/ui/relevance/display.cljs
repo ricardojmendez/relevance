@@ -174,18 +174,23 @@
     (map-indexed
       (fn [i tab]
         (let [url     (:url tab)
-              favicon (:favIconUrl (get site-data (host-key (hostname url))))]
+              favicon (:favIconUrl (get site-data (host-key (hostname url))))
+              title   (:title tab)
+              display (if (< 100 (count title))
+                        (apply str (concat(take 100 title) "..."))
+                        title
+                        )]
           ^{:key i}
           [:tr
-           [:td {:class "col-sm-1"} (time-display (:time tab))]
-           [:td {:class "col-sm-6"} [:a
+           [:td {:class "col-sm-2"} (time-display (:time tab))]
+           [:td {:class "col-sm-9 col-sm-offset-1"} [:a
                                      {:href url :target "_blank"}
                                      (if favicon
                                        [:img {:src    favicon
                                               :width  16
                                               :height 16}])
-                                     (:title tab)]]
-           [:td {:class "col-sm-5"} url]])))))
+                                     display]]
+           ])))))
 
 
 (defn div-urltimes []
@@ -195,13 +200,12 @@
         to-list    (reaction (sort-by #(* -1 (:time %)) @url-values))]
     (fn []
       [:div
-       [:div {:class "page-header"} [:h2 "Times"]]
+       [:div {:class "page-header"} [:h2 "Time reading at a page"]]
        [:table {:class "table table-striped table-hover"}
         [:thead
          [:tr
           [:th "#"]
-          [:th "Title"]
-          [:th "URL"]]]
+          [:th "Title"]]]
         [:tbody
          (list-urls @to-list @site-times)]
         ]])
@@ -256,7 +260,7 @@
         to-list    (reaction (sort-by #(* -1 (:time %)) @sites))]
     (fn []
       [:div
-       [:div {:class "page-header"} [:h2 "Times"]]
+       [:div {:class "page-header"} [:h2 "Time spent at a site"]]
        [:table {:class "table table-striped table-hover"}
         [:thead
          [:tr
