@@ -1,5 +1,6 @@
 (ns relevance.utils
   (:require [cljs.core.async :refer [<!]]
+            [clojure.string :refer [lower-case]]
             [dommy.core :as dommy]
             [cognitect.transit :as transit])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -31,7 +32,8 @@
   (when url
     (-> (dommy/create-element :a)
         (dommy/set-attr! :href url)
-        (.-hostname))))
+        (.-hostname)
+        (lower-case))))
 
 (defn protocol
   "Returns the protocol for a URL"
@@ -39,7 +41,8 @@
   (when url
     (-> (dommy/create-element :a)
         (dommy/set-attr! :href url)
-        (.-protocol))))
+        (.-protocol)
+        (lower-case))))
 
 (defn is-http?
   "Returns true if the string starts with http: or https:"
@@ -55,8 +58,8 @@
   the result."
   [url]
   (if (not-empty url)
-    (let [element   (-> (dommy/create-element :a)
-                        (dommy/set-attr! :href url))
+    (let [element (-> (dommy/create-element :a)
+                      (dommy/set-attr! :href url))
           shortened (str (.toLowerCase (.-host element)) (.-pathname element) (.-search element))]
       (hash-string shortened))
     0))
