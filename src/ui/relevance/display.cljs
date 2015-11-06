@@ -217,12 +217,13 @@
     [:h1 "Welcome!"]]
    [:div {:class "col-sm-10 col-sm-offset-1"}
     [:h2 "Thanks for installing Relevance"]
+    [:p "Relevance is a smart tab organizer. It’s nonintrusive and fully private. When you activate it your tabs are sorted based on the duration you are actively viewing it combined with the total time you actively browse pages on that domain. It will allow you to discover greater insights about your browsing habits."]
+    [:p "Relevance will keep track of the pages you actually read, and how long you spend reading them. This information is kept completely private, on your local browser. As you open tabs, its knowledge of what's important to you grows, and when you activate it the tabs  for your current window are ordered depending on how long you have spent reading them."]
+    [:p "This creates a natural arrangement where the tabs you have spent the longest on, which are expected to be the most relevant, are placed first, and the ones you haven't read at all are shunted to the end."]
     [:p "I'm a tab-aholic. I normally do a search, start opening the tabs that seem interesting, and then as I flip through them, I end up opening even more links on tabs as they seem relevant."]
     [:p "Next thing I know I have a huge mess of tabs, and it's hard to remember which one I've read, or which one is more relevant."]
-    [:p "I wrote Relevance to help manage that."]
-    [:p "When you install Relevance, it'll keep track of the pages you actually read, and how long you spend reading them. This information is kept completely private, on your local browser. As you open tabs, its knowledge of what's important to you grows, and when you activate it, the tabs  for your current window are ordered depending on how long you have spent reading them."]
-    [:p "This ordering creates a natural arrangement where the tabs you have spent the longest on, which are expected to be the most relevant, are placed first, and the ones you haven't read at all are shunted to the end."]
-    [:p "I've found this very useful in organizing what I should be focusing on."]]
+    [:p "I wrote Relevance to help manage that. I've found it very useful in organizing what I should be focusing on, and I hope it'l be useful for you as well."]
+    ]
    [:div {:class "col-sm-10 col-sm-offset-1"}
     [:h2 "Preview software"]
     [:p "Relevance is a software preview, and I'll be happy to hear your comments. If you have any suggestions on what you think might make Relevance better, "
