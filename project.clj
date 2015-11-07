@@ -7,7 +7,6 @@
                  [com.cognitect/transit-cljs "0.8.225"]
                  [cljsjs/react-bootstrap "0.25.2-0" :exclusions [org.webjars.bower/jquery]]
                  [khroma "0.2.0-SNAPSHOT"]
-                 [lein-doo "0.1.6-SNAPSHOT"]
                  [prismatic/dommy "1.1.0"]
                  [re-frame "0.4.1" :exclusions [cljsjs/react]]
                  ]
@@ -63,7 +62,8 @@
                 :ui         {:compiler {:optimizations :advanced
                                         :pretty-print  false}}}}}
              :test
-             {:cljsbuild
+             {:dependencies [[lein-doo "0.1.6-SNAPSHOT"]]
+              :cljsbuild
               {:builds
                {:test
                 {:source-paths ["test" "src/common"]
