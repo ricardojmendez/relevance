@@ -176,10 +176,12 @@
         (let [url     (:url tab)
               favicon (:favIconUrl (get site-data (host-key (hostname url))))
               title   (:title tab)
-              display (if (< 100 (count title))
-                        (apply str (concat(take 100 title) "..."))
-                        title
-                        )]
+              label   (if (empty? title)
+                        url
+                        title)
+              display (if (< 100 (count label))
+                        (apply str (concat(take 100 label) "..."))
+                        label)]
           ^{:key i}
           [:tr
            [:td {:class "col-sm-2"} (time-display (:time tab))]
