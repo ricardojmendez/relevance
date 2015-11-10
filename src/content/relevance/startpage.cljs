@@ -60,11 +60,12 @@
       )))
 
 (defn ^:export main []
-  (console/log "Init on content script!")
+  ; (console/log "Init on content script!")
   (do-transformations!)
   (let [bg (runtime/connect)]
     (go
       (>! bg :content-initialized)
-      (console/log "<-- Background replied" (<! bg)))))
+      #_ (console/log "<-- Background replied" (<! bg))
+      )))
 
 (main)

@@ -137,7 +137,7 @@
   :data-load
   (fn [app-state [_ loaded]]
     (let [new-data (migrations/migrate-to-latest loaded)]
-      (console/trace "Data load" loaded "migrated" new-data)
+      ; (console/trace "Data load" loaded "migrated" new-data)
       ;; Save the migrated data we just received
       (io/save new-data)
       ;; Process the suspend info
@@ -165,7 +165,7 @@
 (register-handler
   :handle-activation
   (fn [app-state [_ tab start-time]]
-    (console/trace "Handling activation" tab)
+    ; (console/trace "Handling activation" tab)
     (if tab
       (assoc app-state
         :active-tab
@@ -182,7 +182,7 @@
     ;; We get two parameters: the tab, and optionally the time at which it
     ;; was deactivated (which defaults to now)
     [app-state [_ tab end-time]]
-    (console/trace " Deactivating " tab)
+    ; (console/trace " Deactivating " tab)
     (when (< 0 (:start-time tab))
       (dispatch [:track-time tab (- (or end-time (now))
                                     (:start-time tab))]))
@@ -198,7 +198,7 @@
                        (get-in app-state [:app-state :idle])
                        (:active-tab app-state))
           ]
-      (console/trace " State changed to " state action)
+      ; (console/trace " State changed to " state action)
       ;; We only store the idle tabs on the app state if we actually idled any.
       ;; That way we avoid losing the originally stored idled tabs when we
       ;; first go from active->idle and then from idle->locked (the first one
@@ -318,7 +318,7 @@
           url-times  (data/track-url-time (or (:url-times data) {}) tab time (now))
           site-times (data/track-site-time (or (:site-times data) {}) tab time (now))
           new-data   (assoc data :url-times url-times :site-times site-times)]
-      (console/trace time " milliseconds spent at " tab)
+      ; (console/trace time " milliseconds spent at " tab)
       (io/save new-data)
       (assoc app-state :data new-data)
       )))
@@ -326,7 +326,7 @@
 (register-handler
   ::window-focus
   (fn [app-state [_ {:keys [windowId]}]]
-    (console/trace "Current window" windowId)
+    ; (console/trace "Current window" windowId)
     (let [active-tab (:active-tab app-state)
           replacing? (not= windowId (:windowId active-tab))
           is-none?   (= windowId windows/none)]
@@ -355,7 +355,7 @@
   (go-loop
     [connections (runtime/on-connect)]
     (let [content (<! connections)]
-      (console/log "--> Background received" (<! content))
+      ; (console/log "--> Background received" (<! content))
       (>! content :background-ack)
       (recur connections)))
   )
