@@ -190,14 +190,19 @@
                         label)]
           ^{:key i}
           [:tr
-           [:td {:class "col-sm-2"} (time-display (:time tab))]
-           [:td {:class "col-sm-9 col-sm-offset-1"} [:a
-                                                     {:href url :target "_blank"}
-                                                     (if favicon
-                                                       [:img {:src    favicon
-                                                              :width  16
-                                                              :height 16}])
-                                                     display]]
+           [:td {:class "col-sm-2"}
+            (time-display (:time tab))]
+           [:td {:class "col-sm-8"}
+            [:a
+             {:href url :target "_blank"}
+             (if favicon
+               [:img {:src    favicon
+                      :width  16
+                      :height 16}])
+             display]]
+           [:td {:class "col-sm-2"}
+            (time-display (quot (- (.now js/Date) (:ts tab)) 1000))
+            ]
            ])))))
 
 
@@ -214,9 +219,11 @@
           [:thead
            [:tr
             [:th "Time"]
-            [:th "Title"]]]
+            [:th "Title"]
+            [:th "Last visit"]]]
           [:tbody
-           (list-urls @to-list @site-times)]]]]
+           (list-urls @to-list @site-times)
+           ]]]]
        ])
     ))
 
