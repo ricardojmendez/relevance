@@ -31,6 +31,10 @@
 
 (defn now [] (.now js/Date))
 
+;; Clean-up parameters
+(def day-in-ms 86400000)
+
+
 
 ;;;;-------------------------------------
 ;;;; Functions
@@ -136,7 +140,16 @@
 (register-handler
   :data-load
   (fn [app-state [_ loaded]]
-    (let [new-data (migrations/migrate-to-latest loaded)]
+    (let [migrated  (migrations/migrate-to-latest loaded)
+          new-urls  (->
+                      (:url-times migrated)
+                      (data/time-clean-up (- (now) (* 7 day-in-ms)) 30)
+                      (data/time-clean-up (- (now) (* 14 day-in-ms)) 90)
+                      (data/time-clean-up (- (now) (* 30 day-in-ms)) 300))
+          new-sites (if (not= new-urls (:url-times migrated))
+                      (data/accumulate-site-times new-urls)
+                      (:site-times migrated))
+          new-data  (assoc migrated :url-times new-urls :site-times new-sites)]
       ; (console/trace "Data load" loaded "migrated" new-data)
       ;; Save the migrated data we just received
       (io/save new-data)
