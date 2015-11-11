@@ -119,32 +119,38 @@
    [:a {:on-click #(dispatch [:app-state-item [:ui-state :section] section])} label
     (when (= section current) [:span {:class "sr-only"} "(current)"])]])
 
-(defn navbar []
+(defn nav-left-item [label class section current]
+  [:li {:class (when (= section current) "active")}
+   [:a {:on-click #(dispatch [:app-state-item [:ui-state :section] section])}
+    [:i {:class class}]
+    [:p label]
+    ]]
+  )
+
+(defn nav-left []
   (let [section (subscribe [:ui-state :section])]
     (fn []
-      [:nav {:class "navbar navbar-default"}
-       [:div {:class "container-fluid"}
-        [:div {:class "navbar-header"}
-         [:button {:type "button", :class "navbar-toggle collapsed", :data-toggle "collapse", :data-target "#bs-example-navbar-collapse-1"}
-          [:span {:class "sr-only"} "Toggle navigation"]
-          [:span {:class "icon-bar"}]
-          [:span {:class "icon-bar"}]
-          [:span {:class "icon-bar"}]]
-         [:a {:class "navbar-brand" :href "http://numergent.com" :target "_blank"} "Relevance"]]
-        [:div {:class "collapse navbar-collapse", :id "bs-example-navbar-collapse-1"}
-         [:ul {:class "nav navbar-nav"}
-          [navbar-item "Introduction" :intro @section]
-          [navbar-item "Times per page" :url-times @section]
-          [navbar-item "Times per site" :site-times @section]
-          ]
-         #_[:form {:class "navbar-form navbar-left", :role "search"}
-            [:div {:class "form-group"}
-             [:input {:type "text", :class "form-control", :placeholder "Search"}]]
-            [:button {:type "submit", :class "btn btn-default"} "Submit"]]
-         [:ul {:class "nav navbar-nav navbar-right"}
-          [navbar-item "Export" :export @section]
-          [navbar-item "Import" :import @section]]]]])))
+      [:ul {:class "nav"}
+       (nav-left-item "Introduction" "pe-7s-home" :intro @section)
+       (nav-left-item "Page times" "pe-7s-note2" :url-times @section)
+       (nav-left-item "Site times" "pe-7s-note2" :site-times @section)
+       (nav-left-item "Export data" "pe-7s-box1" :export @section)
+       (nav-left-item "Import data" "pe-7s-attention" :import @section)]))
+  )
 
+(defn nav-top []
+  (let [section (subscribe [:ui-state :section])]
+    (fn []
+      [:div {:class "navbar-header"}
+       [:a {:class "navbar-brand"}
+        (condp = @section
+          :intro "About Relevance"
+          :url-times "Time reading a page"
+          :site-times "Time visiting a site"
+          :export "Export your Relevance data"
+          :import "Import a Relevance backup"
+          "")
+        ]])))
 
 ;; We could actually move modal-confirm to a component namespace, parametrize it.
 (defn modal-confirm []
@@ -180,18 +186,18 @@
                         url
                         title)
               display (if (< 100 (count label))
-                        (apply str (concat(take 100 label) "..."))
+                        (apply str (concat (take 100 label) "..."))
                         label)]
           ^{:key i}
           [:tr
            [:td {:class "col-sm-2"} (time-display (:time tab))]
            [:td {:class "col-sm-9 col-sm-offset-1"} [:a
-                                     {:href url :target "_blank"}
-                                     (if favicon
-                                       [:img {:src    favicon
-                                              :width  16
-                                              :height 16}])
-                                     display]]
+                                                     {:href url :target "_blank"}
+                                                     (if favicon
+                                                       [:img {:src    favicon
+                                                              :width  16
+                                                              :height 16}])
+                                                     display]]
            ])))))
 
 
@@ -201,16 +207,49 @@
         url-values (reaction (filter-tabs (vals @url-times)))
         to-list    (reaction (sort-by #(* -1 (:time %)) @url-values))]
     (fn []
-      [:div
-       [:div {:class "page-header"} [:h2 "Time reading at a page"]]
-       [:table {:class "table table-striped table-hover"}
-        [:thead
-         [:tr
-          [:th "#"]
-          [:th "Title"]]]
-        [:tbody
-         (list-urls @to-list @site-times)]
-        ]])
+      [:div {:class "row"}
+       [:div {:class "card"}
+        [:div {:class "content table-responsive table-full-width"}
+         [:table {:class "table table-striped table-hover"}
+          [:thead
+           [:tr
+            [:th "Time"]
+            [:th "Title"]]]
+          [:tbody
+           (list-urls @to-list @site-times)]]]]
+       ])
+    ))
+
+(defn div-sitetimes []
+  (let [site-times (subscribe [:data :site-times])
+        sites      (reaction (vals @site-times))
+        to-list    (reaction (sort-by #(* -1 (:time %)) @sites))]
+    (fn []
+      [:div {:class "row"}
+       [:div {:class "card"}
+        [:div {:class "content table-responsive table-full-width"}
+         [:table {:class "table table-striped table-hover"}
+          [:thead
+           [:tr
+            [:th "Time"]
+            [:th "Site"]]]
+          [:tbody
+           (->>
+             @to-list
+             (map-indexed
+               (fn [i site]
+                 (let [url     (:host site)
+                       favicon (:favIconUrl site)]
+                   ^{:key i}
+                   [:tr
+                    [:td {:class "col-sm-1"} (time-display (:time site))]
+                    [:td {:class "col-sm-6"} (if favicon
+                                               [:img {:src    favicon
+                                                      :width  16
+                                                      :height 16}])
+                     url]
+                    ]))))]
+          ]]]])
     ))
 
 (defn div-intro []
@@ -257,42 +296,11 @@
    ]
   )
 
-(defn div-sitetimes []
-  (let [site-times (subscribe [:data :site-times])
-        sites      (reaction (vals @site-times))
-        to-list    (reaction (sort-by #(* -1 (:time %)) @sites))]
-    (fn []
-      [:div
-       [:div {:class "page-header"} [:h2 "Time spent at a site"]]
-       [:table {:class "table table-striped table-hover"}
-        [:thead
-         [:tr
-          [:th "#"]
-          [:th "Site"]]]
-        [:tbody
-         (->>
-           @to-list
-           (map-indexed
-             (fn [i site]
-               (let [url     (:host site)
-                     favicon (:favIconUrl site)]
-                 ^{:key i}
-                 [:tr
-                  [:td {:class "col-sm-1"} (time-display (:time site))]
-                  [:td {:class "col-sm-6"} (if favicon
-                                             [:img {:src    favicon
-                                                    :width  16
-                                                    :height 16}])
-                   url]
-                  ]))))]
-        ]])
-    ))
-
 
 (defn data-export []
   (let [data (subscribe [:raw-data])]
     (fn []
-      [:div
+      [:div {:class "col-sm-10 col-sm-offset-1"}
        [:div {:class "page-header"} [:h2 "Current data"]]
        [:p (str "Copy the text below to a safe location. Size: " (count @data))]
        [:textarea {:class     "form-control"
@@ -306,7 +314,7 @@
   (let [path        [:app-state :import]
         import-data (subscribe path)]
     (fn []
-      [:div
+      [:div {:class "col-sm-10 col-sm-offset-1"}
        [:div {:class "page-header"} [:h2 "Import data"]]
        [:div {:class "alert alert-warning"}
         [:h4 "Warning!"]
@@ -341,7 +349,8 @@
 
 
 (defn mount-components []
-  (reagent/render-component [navbar] (.getElementById js/document "navbar"))
+  (reagent/render-component [nav-left] (.getElementById js/document "nav-left"))
+  (reagent/render-component [nav-top] (.getElementById js/document "nav-top"))
   (reagent/render-component [main-section] (.getElementById js/document "main-section")))
 
 

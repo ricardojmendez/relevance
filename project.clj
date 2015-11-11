@@ -46,11 +46,12 @@
 
               }
 
-  :chromebuild {:resource-paths ["resources/js"
-                                 "resources/html"
-                                 "resources/images"
-                                 "resources/css"]
-                :target-path    "target/unpacked"}
+  :chromebuild {:resource-paths   ["resources/js"
+                                   "resources/dashboard"
+                                   "resources/images"
+                                   "resources/css"]
+                :preserve-folders true
+                :target-path      "target/unpacked"}
 
   :profiles {:release
              {:cljsbuild
@@ -64,13 +65,13 @@
              :test
              {:dependencies [[lein-doo "0.1.6-SNAPSHOT"]]
               :cljsbuild
-              {:builds
-               {:test
-                {:source-paths ["test" "src/common"]
-                 :compiler     {:output-to     "target/js/test/relevance-tests.js"
-                                :output-dir    "target/js/test"
-                                :main          relevance.test.runner
-                                :optimizations :none
-                                :pretty-print  :true}}}}
+                            {:builds
+                             {:test
+                              {:source-paths ["test" "src/common"]
+                               :compiler     {:output-to     "target/js/test/relevance-tests.js"
+                                              :output-dir    "target/js/test"
+                                              :main          relevance.test.runner
+                                              :optimizations :none
+                                              :pretty-print  :true}}}}
               }
              })
