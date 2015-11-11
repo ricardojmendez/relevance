@@ -2,6 +2,29 @@
   (:require [relevance.utils :refer [url-key host-key hostname]]))
 
 
+(defn accumulate-site-times
+  "Accumulates the total time for a site from a hashmap of URL times"
+  [url-times]
+  (->>
+    (group-by #(hostname (:url %)) (vals url-times))
+    (into {} (map #(vector (host-key (key %))
+                           (hash-map :host (key %)
+                                     :time (apply + (map :time (val %)))
+                                     :favIconUrl (:favIconUrl (first (val %))))
+                           )))
+    ))
+
+
+(defn time-clean-up
+  "Removes from url-times all the items that are older than cut-off-ts
+  and which were viewed for less than min-seconds"
+  [url-times cut-off-ts min-seconds]
+  (into {} (remove #(and (< (:timestamp (val %))
+                            cut-off-ts)
+                         (< (:time (val %))
+                            (* min-seconds 1000)))
+                   url-times)))
+
 (defn track-url-time
   "Receives a url time database, a tab record and a time to track, and returns
   new time database which is the result of adding the time to the URL. It also

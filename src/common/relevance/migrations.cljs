@@ -1,16 +1,7 @@
 (ns relevance.migrations
-  (:require [relevance.utils :refer [url-key host-key hostname]]))
-
-
-(defn accumulate-site-times [url-times]
-  (->>
-    (group-by #(hostname (:url %)) (vals url-times))
-    (into {} (map #(vector (host-key (key %))
-                           (hash-map :host (key %)
-                                     :time (apply + (map :time (val %)))
-                                     :favIconUrl (:favIconUrl (first (val %))))
-                           )))
-    ))
+  (:require
+    [relevance.data :refer [accumulate-site-times]]
+    [relevance.utils :refer [url-key host-key hostname]]))
 
 
 (defn migrate

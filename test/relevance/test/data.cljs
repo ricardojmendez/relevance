@@ -12,32 +12,47 @@
    :suspend-info nil
    :data-version 1
    :url-times    {-327774960
-                  {:url       "http://numergent.com/tags/khroma/",
-                   :time      117300,
-                   :timestamp 1445964037798,
+                  {:url       "http://numergent.com/tags/khroma/"
+                   :time      117300
+                   :timestamp 1445964037798
                    :title     "Khroma articles"}
                   -526558523
-                  {:url       "http://numergent.com/opensource/",
-                   :time      27300,
-                   :timestamp 1445964037798,
+                  {:url       "http://numergent.com/opensource/"
+                   :time      27300
+                   :timestamp 1445964037798
                    :title     "Open source projects"}
                   -2272190
-                  {:url       "http://lanyrd.com/conferences/",
-                   :time      5617,
-                   :timestamp 1446047687895,
+                  {:url       "http://lanyrd.com/conferences/"
+                   :time      5617
+                   :timestamp 1446047687895
                    :title     "Conferences and events worldwide | Lanyrd"}
                   -327358142
-                  {:url       "https://developer.chrome.com/extensions/contextMenus",
-                   :time      901682,
-                   :timestamp 1446028215734,
+                  {:url       "https://developer.chrome.com/extensions/contextMenus"
+                   :time      901682
+                   :timestamp 1446028215734
                    :title     "chrome.contextMenus - Google Chrome"}
                   1917381154
-                  {:url       "http://www.kitco.com/market/",
-                   :time      4432,
-                   :timestamp 1446051494575,
+                  {:url       "http://www.kitco.com/market/"
+                   :time      4432
+                   :timestamp 1446051494575
                    :title     "New York spot price Gold..."
                    }
-                  }
+                  ;; The next two items are used for pruning tests. Notice that
+                  ;; prismatic has less time than splunk but was accessed later.
+                  ;; Changing those values would break the tests.
+                  1609181525
+                  {:url       "http://getprismatic.com/oauth-complete?result=login"
+                   :time      350
+                   :timestamp 1446114615912
+                   :title     "Prismatic login"
+
+                   }
+                  1038158073
+                  {:url       "http://splunk.com/"
+                   :time      29950
+                   :timestamp 1446028215912
+                   :title     "Splunk"
+                   }}
    :site-times   {971841386   {:favIconUrl "http://numergent.com/favicon.ico"
                                :time       144600
                                :host       "numergent.com"}
@@ -47,9 +62,12 @@
                   -331299663  {:favIconUrl "https://www.google.com/images/icons/product/chrome-32.png"
                                :time       901682
                                :host       "developer.chrome.com"}
-                  -915908674  {:favIconUrl nil
-                               :time       4432
-                               :host       "www.kitco.com"}}})
+                  -915908674  {:time       4432
+                               :host       "www.kitco.com"}
+                  1366860619  {:time       350
+                               :host       "getprismatic.com"}
+                  1557509622  {:time 29950
+                               :host "splunk.com"}}})
 
 
 (deftest test-host-key
@@ -67,6 +85,8 @@
                  "http://numergent.com/articles/" -925262547
                  "https://google.com/search?q=v" 633277110
                  "https://startpage.com/my/settings#hash" 317544347
+                 "http://getprismatic.com/oauth-complete?result=login" 1609181525
+                 "http://splunk.com/" 1038158073
                  "" 0
                  nil 0))
 
@@ -84,7 +104,7 @@
           id     (utils/url-key "http://numergent.com/opensource/")
           item   (get result id)]
       (is result)
-      (is (= 5 (count result)) "We should get back the same number of elements")
+      (is (= 7 (count result)) "We should get back the same number of elements")
       (is item)
       (is (nil? (:favIconUrl item)))
       (are [k] (= (k item) (k tab)) :url :title)                      ; All the keys should have been updated from the record we're sending
@@ -106,7 +126,7 @@
           tab-key (utils/url-key "http://numergent.com/")
           item    (get result tab-key)]
       (is result)
-      (is (= 6 (count result)) "We should have an extra element")
+      (is (= 8 (count result)) "We should have an extra element")
       (is item)
       (are [k] (= (k item) (k tab)) :url :title)                      ; All the keys should have been updated from the record we're sending
       (is (= ts (:timestamp item)) "Item should have been time-stamped")
@@ -179,7 +199,7 @@
           id     (utils/host-key (utils/hostname "http://numergent.com/opensource/"))
           item   (get result id)]
       (is result)
-      (is (= 4 (count result)) "We should get back four sites")
+      (is (= 6 (count result)) "We should get back the same number of sites")
       (is item)
       (are [expected result] (= expected result)
                              (:favIconUrl tab) (:favIconUrl item)
@@ -201,7 +221,7 @@
           id     (utils/host-key (utils/hostname "https://twitter.com/EvenSomeOtherUrl"))
           item   (get result id)]
       (is result)
-      (is (= 5 (count result)) "We should get back five sites")
+      (is (= 7 (count result)) "Site count should have increased")
       (is item)
       (are [expected result] (= expected result)
                              (:favIconUrl tab) (:favIconUrl item)
@@ -224,3 +244,68 @@
   )
 
 
+(deftest test-time-clean-up
+  (testing "Clean up date and minimum time are respected"
+    (let [min-date 1446028215913
+          pruned   (data/time-clean-up (:url-times test-db) min-date 30)]
+      (is pruned)
+      (is (= 5 (count pruned)))
+      ;; We removed the right elements
+      (is (nil? (get pruned (utils/url-key "http://splunk.com/"))))
+      (is (nil? (get pruned (utils/url-key "http://numergent.com/opensource/"))))
+      ;; The very briefly accessed prismatic login remains because of its timestamp
+      (is (get pruned (utils/url-key "http://getprismatic.com/oauth-complete?result=login")))
+      ))
+  (testing "Timestamp filtering is only on strictly greater than"
+    (let [min-date 1446114615912
+          pruned   (data/time-clean-up (:url-times test-db) min-date 30)]
+      (is pruned)
+      (is (= 3 (count pruned)))
+      ;; getprismatic is still there
+      (is (get pruned (utils/url-key "http://getprismatic.com/oauth-complete?result=login")))
+      ;; ... as are all the keys we should have
+      (is (= #{-327774960 -327358142 1609181525}
+             (into #{} (keys pruned))))
+      ))
+  (testing "Cut-off seconds are respected when filtering"
+    (let [min-date 1446114615912
+          pruned   (data/time-clean-up (:url-times test-db) min-date 28)]
+      (is pruned)
+      (is (= 4 (count pruned)))
+      ;; getprismatic is still there
+      (is (get pruned (utils/url-key "http://getprismatic.com/oauth-complete?result=login")))
+      ;; ... and we didn' lose splunk
+      (is (get pruned (utils/url-key "http://splunk.com/"))))
+    (let [min-date 1446114615913
+          pruned   (data/time-clean-up (:url-times test-db) min-date 50)]
+      (is pruned)
+      (is (= 2 (count pruned)))
+      (is (= #{-327774960 -327358142}
+             (into #{} (keys pruned)))))
+    ))
+
+(deftest test-accumulate-site-times
+  (testing "Accumulate site times creates a total but doesn't add favicons"
+    (is (= (into {} (map #(vector (key %) (assoc (val %) :favIconUrl nil))
+                         (:site-times test-db)))
+           (data/accumulate-site-times (:url-times test-db))))))
+
+
+(deftest test-accumulate-after-clean-up
+  (testing "We get a value accumulation per site time after clean up"
+    (let [min-date   1446114615912
+          pruned     (data/time-clean-up (:url-times test-db) min-date 30)
+          site-times (data/accumulate-site-times pruned)]
+      (is pruned)
+      (is (= {971841386  {:favIconUrl nil
+                          :time       117300
+                          :host       "numergent.com"}
+              -331299663 {:favIconUrl nil
+                          :time       901682
+                          :host       "developer.chrome.com"}
+              1366860619 {:favIconUrl nil
+                          :time       350
+                          :host       "getprismatic.com"}}
+             site-times))
+      ))
+  )
