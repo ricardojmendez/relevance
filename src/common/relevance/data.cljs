@@ -60,7 +60,7 @@
         track?    (and (not= 0 id)
                        (< 0 time))
         new-item  (assoc site-item :time (+ (:time site-item) time)
-                                   :icon (:icon tab)
+                                   :icon (:favIconUrl tab)
                                    :ts timestamp)]
     (if track?
       (assoc site-times id new-item)

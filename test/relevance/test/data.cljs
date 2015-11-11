@@ -1,10 +1,18 @@
 (ns relevance.test.data
   (:require [cljs.test :refer-macros [deftest testing is are]]
             [relevance.data :as data]
-            [relevance.migrations :as migrations]
             [relevance.utils :as utils]
             ))
 
+;; IMPORTANT: READ THIS BEFORE YOU START MODIFYING THESE TESTS
+;;
+;; You'll notice that when we pass the tab information as a parameter for one
+;; of the calls, we'll use :favIconUrl instead of :icon, which is the one that
+;; we actually keep.
+;;
+;; This is because :favIconUrl is the value we actually get from Chrome. Our
+;; own functions convert it to :icon when saving it. That's why I still need to
+;; use it for the parameters that simulate tabs.
 
 
 (def test-db
@@ -93,9 +101,9 @@
 
 (deftest test-track-url-time
   (testing "Add time to an existing tab"
-    (let [tab    {:url   "http://numergent.com/opensource/"
-                  :title "Open source project details"
-                  :icon  "http://numergent.com/favicon.png"}
+    (let [tab    {:url        "http://numergent.com/opensource/"
+                  :title      "Open source project details"
+                  :favIconUrl "http://numergent.com/favicon.png"}
           ts     1445964037799
           result (data/track-url-time (:url-times test-db)
                                       tab
@@ -115,9 +123,9 @@
         )
       ))
   (testing "Add time to a new tab"
-    (let [tab     {:url   "http://numergent.com/"
-                   :title "Numergent limited"
-                   :icon  "http://numergent.com/favicon.png"}
+    (let [tab     {:url        "http://numergent.com/"
+                   :title      "Numergent limited"
+                   :favIconUrl "http://numergent.com/favicon.png"}
           ts      1445964037799
           result  (data/track-url-time (:url-times test-db)
                                        tab
@@ -152,9 +160,9 @@
 
       ))
   (testing "Add time to a new tab on an empty set"
-    (let [tab     {:url   "http://numergent.com/"
-                   :title "Numergent limited"
-                   :icon  "http://numergent.com/favicon.png"}
+    (let [tab     {:url        "http://numergent.com/"
+                   :title      "Numergent limited"
+                   :favIconUrl "http://numergent.com/favicon.png"}
           ts      12345
           result  (data/track-url-time {} tab 9 ts)
           tab-key (utils/url-key "http://numergent.com/")
@@ -182,9 +190,9 @@
 
 (deftest test-track-site-time
   (testing "Add time to an empty database"
-    (let [tab    {:url   "http://numergent.com/opensource/"
-                  :title "Open source project details"
-                  :icon  "http://numergent.com/favicon.png"}
+    (let [tab    {:url        "http://numergent.com/opensource/"
+                  :title      "Open source project details"
+                  :favIconUrl "http://numergent.com/favicon.png"}
           ts     1445964037799
           result (data/track-site-time {}
                                        tab
@@ -196,15 +204,15 @@
       (is (= 1 (count result)) "We should get back a single element")
       (is item)
       (are [expected result] (= expected result)
-                             (:icon tab) (:icon item)
+                             (:favIconUrl tab) (:icon item)
                              "numergent.com" (:host item)
                              ts (:ts item)
                              1234 (:time item)))
     )
   (testing "Add time to an existing database for an existing site"
-    (let [tab    {:url   "http://numergent.com/opensource/index.html"
-                  :title "Further open source project details"
-                  :icon  "http://numergent.com/newfavicon.png"}
+    (let [tab    {:url        "http://numergent.com/opensource/index.html"
+                  :title      "Further open source project details"
+                  :favIconUrl "http://numergent.com/newfavicon.png"}
           ts     1445964037900
           result (data/track-site-time (:site-times test-db)
                                        tab
@@ -216,7 +224,7 @@
       (is (= 6 (count result)) "We should get back the same number of sites")
       (is item)
       (are [expected result] (= expected result)
-                             (:icon tab) (:icon item)
+                             (:favIconUrl tab) (:icon item)
                              "numergent.com" (:host item)
                              ts (:ts item)
                              147 (:time item))
@@ -224,9 +232,9 @@
         (is (= (val other) (get (:site-times test-db) (key other))) "Other items should have remained untouched")
         )))
   (testing "Add time to an existing database for a new site"
-    (let [tab    {:url   "https://twitter.com/ArgesRic"
-                  :title "ArgesRic"
-                  :icon  "https://abs.twimg.com/favicons/favicon.ico"}
+    (let [tab    {:url        "https://twitter.com/ArgesRic"
+                  :title      "ArgesRic"
+                  :favIconUrl "https://abs.twimg.com/favicons/favicon.ico"}
           ts     1445964037920
           result (data/track-site-time (:site-times test-db)
                                        tab
@@ -238,7 +246,7 @@
       (is (= 7 (count result)) "Site count should have increased")
       (is item)
       (are [expected result] (= expected result)
-                             (:icon tab) (:icon item)
+                             (:favIconUrl tab) (:icon item)
                              "twitter.com" (:host item)
                              ts (:ts item)
                              9 (:time item))
@@ -247,9 +255,9 @@
         ))
     )
   (testing "Add zero time should not result on any changes"
-    (let [tab    {:url   "https://twitter.com/ArgesRic"
-                  :title "ArgesRic"
-                  :icon  "https://abs.twimg.com/favicons/favicon.ico"}
+    (let [tab    {:url        "https://twitter.com/ArgesRic"
+                  :title      "ArgesRic"
+                  :favIconUrl "https://abs.twimg.com/favicons/favicon.ico"}
           ts     1445964037920
           result (data/track-site-time (:site-times test-db)
                                        tab

@@ -26,7 +26,7 @@
 
 (def window-alarm "window-alarm")
 (def non-http-penalty 0.05)
-(def relevant-tab-keys [:windowId :id :active :url :start-time :title :icon])
+(def relevant-tab-keys [:windowId :id :active :url :start-time :title :favIconUrl])
 (def select-tab-keys #(select-keys % relevant-tab-keys))
 
 (defn now [] (.now js/Date))
