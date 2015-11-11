@@ -1,5 +1,6 @@
 (ns relevance.migrations
   (:require
+    [clojure.set :refer [rename-keys]]
     [relevance.data :refer [accumulate-site-times]]
     [relevance.utils :refer [url-key host-key hostname]]))
 
@@ -15,13 +16,26 @@
                                   (.-uuid (random-uuid))))
           (assoc :data-version 1)
           (assoc :url-times (into {} (map #(vector (key %)
-                                                   (dissoc (val %) :favIconUrl))
+                                                   (dissoc (val %) :favIconUrl :icon))
                                           (:url-times data))))
           (assoc :site-times (accumulate-site-times (:url-times data))))
     1 (->
         data
         (assoc :data-version 2)
         (assoc :site-times (accumulate-site-times (:url-times data))))
+    2 (let [url-times (into {}
+                            (->>
+                              (:url-times data)
+                              (map #(vector (key %)
+                                            (-> (val %)
+                                                (assoc :time (quot (:time (val %)) 1000))
+                                                (rename-keys {:timestamp :ts}))))
+                              (remove #(= 0 (:time (second %))))))]
+        (assoc data
+          :data-version 3
+          :url-times url-times
+          :site-times (accumulate-site-times url-times))
+        )
     data
     ))
 

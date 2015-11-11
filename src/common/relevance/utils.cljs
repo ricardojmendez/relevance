@@ -58,8 +58,8 @@
   the result."
   [url]
   (if (not-empty url)
-    (let [element (-> (dommy/create-element :a)
-                      (dommy/set-attr! :href url))
+    (let [element   (-> (dommy/create-element :a)
+                        (dommy/set-attr! :href url))
           shortened (str (.toLowerCase (.-host element)) (.-pathname element) (.-search element))]
       (hash-string shortened))
     0))
@@ -67,13 +67,11 @@
 
 (defn time-display
   "Returns a display string for a number of milliseconds"
-  [millis]
-  (let [seconds (quot millis 1000)]
-    (cond
-      (< seconds 1) "< 1s"
-      (< seconds 60) (str seconds "s")
-      (< seconds 3600) (str (quot seconds 60) "min " (rem seconds 60) "s")
-      (< seconds 86400) (str (quot seconds 3600) "h " (quot (rem seconds 3600) 60) "min")
-      ;; TODO: 86592666 is returning "1d 0h", we should elide the lowest if it's 0
-      :else (str (quot seconds 86400) "d " (quot (rem seconds 86400) 3600) "h"))
-    ))
+  [seconds]
+  (cond
+    (< seconds 1) "< 1s"
+    (< seconds 60) (str seconds "s")
+    (< seconds 3600) (str (quot seconds 60) "min " (rem seconds 60) "s")
+    (< seconds 86400) (str (quot seconds 3600) "h " (quot (rem seconds 3600) 60) "min")
+    ;; TODO: 86592666 is returning "1d 0h", we should elide the lowest if it's 0
+    :else (str (quot seconds 86400) "d " (quot (rem seconds 86400) 3600) "h")))

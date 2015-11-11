@@ -26,7 +26,7 @@
 
 (def window-alarm "window-alarm")
 (def non-http-penalty 0.05)
-(def relevant-tab-keys [:windowId :id :active :url :start-time :title :favIconUrl])
+(def relevant-tab-keys [:windowId :id :active :url :start-time :title :icon])
 (def select-tab-keys #(select-keys % relevant-tab-keys))
 
 (defn now [] (.now js/Date))
@@ -328,8 +328,8 @@
   :track-time
   (fn [app-state [_ tab time]]
     (let [data       (:data app-state)
-          url-times  (data/track-url-time (or (:url-times data) {}) tab time (now))
-          site-times (data/track-site-time (or (:site-times data) {}) tab time (now))
+          url-times  (data/track-url-time (or (:url-times data) {}) tab (quot time 1000) (now))
+          site-times (data/track-site-time (or (:site-times data) {}) tab (quot time 1000) (now))
           new-data   (assoc data :url-times url-times :site-times site-times)]
       ; (console/trace time " milliseconds spent at " tab)
       (io/save new-data)
