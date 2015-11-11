@@ -3,7 +3,7 @@
             [relevance.data :as data]
             [relevance.io :as io]
             [relevance.migrations :as migrations]
-            [relevance.utils :refer [on-channel url-key host-key hostname is-http?]]
+            [relevance.utils :refer [on-channel url-key host-key hostname is-http? ms-day]]
             [khroma.alarms :as alarms]
             [khroma.context-menus :as menus]
             [khroma.idle :as idle]
@@ -30,9 +30,6 @@
 (def select-tab-keys #(select-keys % relevant-tab-keys))
 
 (defn now [] (.now js/Date))
-
-;; Clean-up parameters
-(def day-in-ms 86400000)
 
 
 
@@ -143,9 +140,9 @@
     (let [migrated  (migrations/migrate-to-latest loaded)
           new-urls  (->
                       (:url-times migrated)
-                      (data/time-clean-up (- (now) (* 7 day-in-ms)) 30)
-                      (data/time-clean-up (- (now) (* 14 day-in-ms)) 90)
-                      (data/time-clean-up (- (now) (* 30 day-in-ms)) 300))
+                      (data/time-clean-up (- (now) (* 7 ms-day)) 30)
+                      (data/time-clean-up (- (now) (* 14 ms-day)) 90)
+                      (data/time-clean-up (- (now) (* 30 ms-day)) 300))
           new-sites (if (not= new-urls (:url-times migrated))
                       (data/accumulate-site-times new-urls)
                       (:site-times migrated))

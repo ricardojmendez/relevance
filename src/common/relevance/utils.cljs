@@ -6,6 +6,21 @@
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 
+
+;;;;-------------------------------------
+;;;; Values
+;;;;-------------------------------------
+
+
+(def ms-hour (* 60 60 1000))
+(def ms-day 86400000)
+(def ms-week (* 7 ms-day))
+
+;;;;-------------------------------------
+;;;; Functions
+;;;;-------------------------------------
+
+
 (defn on-channel
   "Dispatches msg when there's content received on the channel returned by
   function chan-f. Expects a dispatch function."

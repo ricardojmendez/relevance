@@ -1,5 +1,6 @@
 (ns relevance.display
-  (:require [relevance.utils :refer [on-channel from-transit time-display host-key hostname]]
+  (:require [relevance.utils :refer [on-channel from-transit time-display host-key hostname
+                                     ms-hour ms-day ms-week]]
             [cljs.core.async :refer [>! <!]]
             [cljs.core :refer [random-uuid]]
             [cljsjs.react-bootstrap]
@@ -187,7 +188,18 @@
                         title)
               display (if (< 100 (count label))
                         (apply str (concat (take 100 label) "..."))
-                        label)]
+                        label)
+              age-ms  (- (.now js/Date) (:ts tab))
+              ;; Colors picked at http://www.w3schools.com/tags/ref_colorpicker.asp
+              color   (cond
+                        (< age-ms ms-hour) "#00ff00"
+                        (< age-ms ms-day) "#00cc00"
+                        (< age-ms (* 3 ms-day)) "#009900"
+                        (< age-ms (* 7 ms-day)) "#ff8000"
+                        (< age-ms (* 14 ms-day)) "#cc6600"
+                        :else "#994c00"
+                        )
+                      ]
           ^{:key i}
           [:tr
            [:td {:class "col-sm-2"}
@@ -201,8 +213,8 @@
                       :height 16}])
              display]]
            [:td {:class "col-sm-2"}
-            (time-display (quot (- (.now js/Date) (:ts tab)) 1000))
-            ]
+            [:i (merge {:class "fa fa-circle" :style {:color color}})]
+            (time-display (quot age-ms 1000))]
            ])))))
 
 
