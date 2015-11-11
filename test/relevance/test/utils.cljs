@@ -42,19 +42,17 @@
 
 (deftest test-time-display
   (are [time label] (= (utils/time-display time) label)
-                    500 "< 1s"
-                    999 "< 1s"
-                    1000 "1s"
-                    1001 "1s"
-                    1999 "1s"
-                    3742 "3s"
-                    49231 "49s"
-                    124076 "2min 4s"
-                    762661 "12min 42s"
-                    8659266 "2h 24min"
-                    86592666 "1d 0h"
-                    124076042 "1d 10h"
-                    248996042 "2d 21h"
+                    0 "< 1s"
+                    0.999 "< 1s"
+                    1 "1s"
+                    3 "3s"
+                    49 "49s"
+                    124 "2min 4s"
+                    762 "12min 42s"
+                    8659 "2h 24min"
+                    86592 "1d 0h"
+                    124076 "1d 10h"
+                    248996 "2d 21h"
                     ))
 
 (deftest test-host

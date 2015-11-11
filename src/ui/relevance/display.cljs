@@ -47,7 +47,7 @@
 
 
 ;; Tab items we actually care about
-(def relevant-tab-items [:index :url :title :favIconUrl])
+(def relevant-tab-items [:index :url :title :icon])
 
 
 ;;;;----------------------------
@@ -180,7 +180,7 @@
     (map-indexed
       (fn [i tab]
         (let [url     (:url tab)
-              favicon (:favIconUrl (get site-data (host-key (hostname url))))
+              favicon (:icon (get site-data (host-key (hostname url))))
               title   (:title tab)
               label   (if (empty? title)
                         url
@@ -238,13 +238,13 @@
              @to-list
              (map-indexed
                (fn [i site]
-                 (let [url     (:host site)
-                       favicon (:favIconUrl site)]
+                 (let [url  (:host site)
+                       icon (:icon site)]
                    ^{:key i}
                    [:tr
                     [:td {:class "col-sm-1"} (time-display (:time site))]
-                    [:td {:class "col-sm-6"} (if favicon
-                                               [:img {:src    favicon
+                    [:td {:class "col-sm-6"} (if icon
+                                               [:img {:src    icon
                                                       :width  16
                                                       :height 16}])
                      url]

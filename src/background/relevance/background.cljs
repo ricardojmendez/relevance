@@ -26,10 +26,14 @@
 
 (def window-alarm "window-alarm")
 (def non-http-penalty 0.05)
-(def relevant-tab-keys [:windowId :id :active :url :start-time :title :favIconUrl])
+(def relevant-tab-keys [:windowId :id :active :url :start-time :title :icon])
 (def select-tab-keys #(select-keys % relevant-tab-keys))
 
 (defn now [] (.now js/Date))
+
+;; Clean-up parameters
+(def day-in-ms 86400000)
+
 
 
 ;;;;-------------------------------------
@@ -136,7 +140,16 @@
 (register-handler
   :data-load
   (fn [app-state [_ loaded]]
-    (let [new-data (migrations/migrate-to-latest loaded)]
+    (let [migrated  (migrations/migrate-to-latest loaded)
+          new-urls  (->
+                      (:url-times migrated)
+                      (data/time-clean-up (- (now) (* 7 day-in-ms)) 30)
+                      (data/time-clean-up (- (now) (* 14 day-in-ms)) 90)
+                      (data/time-clean-up (- (now) (* 30 day-in-ms)) 300))
+          new-sites (if (not= new-urls (:url-times migrated))
+                      (data/accumulate-site-times new-urls)
+                      (:site-times migrated))
+          new-data  (assoc migrated :url-times new-urls :site-times new-sites)]
       ; (console/trace "Data load" loaded "migrated" new-data)
       ;; Save the migrated data we just received
       (io/save new-data)
@@ -315,8 +328,8 @@
   :track-time
   (fn [app-state [_ tab time]]
     (let [data       (:data app-state)
-          url-times  (data/track-url-time (or (:url-times data) {}) tab time (now))
-          site-times (data/track-site-time (or (:site-times data) {}) tab time (now))
+          url-times  (data/track-url-time (or (:url-times data) {}) tab (quot time 1000) (now))
+          site-times (data/track-site-time (or (:site-times data) {}) tab (quot time 1000) (now))
           new-data   (assoc data :url-times url-times :site-times site-times)]
       ; (console/trace time " milliseconds spent at " tab)
       (io/save new-data)
