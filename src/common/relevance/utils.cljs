@@ -68,10 +68,14 @@
 (defn time-display
   "Returns a display string for a number of milliseconds"
   [seconds]
-  (cond
-    (< seconds 1) "< 1s"
-    (< seconds 60) (str seconds "s")
-    (< seconds 3600) (str (quot seconds 60) "min " (rem seconds 60) "s")
-    (< seconds 86400) (str (quot seconds 3600) "h " (quot (rem seconds 3600) 60) "min")
-    ;; TODO: 86592666 is returning "1d 0h", we should elide the lowest if it's 0
-    :else (str (quot seconds 86400) "d " (quot (rem seconds 86400) 3600) "h")))
+  (letfn [(time-label [major major-label minor minor-label]
+            (apply str (concat [major major-label]
+                               (when (< 0 minor) [" " minor minor-label]))))]
+    (cond
+      (< seconds 1) "< 1s"
+      (< seconds 60) (str seconds "s")
+      (< seconds 3600) (time-label (quot seconds 60) "min" (rem seconds 60) "s")
+      (< seconds 86400) (time-label (quot seconds 3600) "h" (quot (rem seconds 3600) 60) "min")
+      :else (time-label (quot seconds 86400) "d" (quot (rem seconds 86400) 3600) "h"))
+    )
+  )
