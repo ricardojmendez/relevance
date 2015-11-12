@@ -51,8 +51,8 @@
           nodes
           (map #(aget % "rootItem"))
           (map-indexed #(do
-                         ;; We assign it (- 100 %1) so that the first nodes get a higher value
-                         (aset %2 "sort-order" (or (aget %2 "total-time") (- 100 %1)))
+                         ;; We assign it (- %1) so that the first nodes get a higher value
+                         (aset %2 "sort-order" (or (aget %2 "total-time") (- %1)))
                          %2))
           (sort-by #(* -1 (aget % "sort-order")))
           (map #(.appendChild base %))))
