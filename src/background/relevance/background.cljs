@@ -94,7 +94,7 @@
         score     (if (is-http? url) total (* total non-http-penalty))
         ]
     (or (when tab-time score)
-        (- 2000 idx))))
+        (- idx))))
 
 (defn sort-tabs! [window-id data]
   (go
