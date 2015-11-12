@@ -325,7 +325,38 @@
   (testing "Accumulate site times creates a total but doesn't add favicons"
     (is (= (into {} (map #(vector (key %) (assoc (val %) :icon nil))
                          (:site-times test-db)))
-           (data/accumulate-site-times (:url-times test-db))))))
+           (data/accumulate-site-times (:url-times test-db)))))
+  (testing "Accumulate site times should disregard empty hosts"
+    (let [data {2080624698
+                {:url   "/tags/khroma/"
+                 :time  117
+                 :ts    1445964037798
+                 :title "Khroma articles"}
+                -526558523
+                {:url   "http://numergent.com/opensource/"
+                 :time  27
+                 :ts    1445964037798
+                 :title "Open source projects"}
+                -327774960
+                {:url   "http://numergent.com/tags/khroma/"
+                 :time  12
+                 :ts    1445964037798
+                 :title "Khroma articles"}
+                1917381154
+                {:url   "http://www.kitco.com/market/"
+                 :time  4
+                 :ts    1446051494575
+                 :title "New York spot price Gold..."
+                 }}
+          acc  (data/accumulate-site-times data)]
+      ;; There should be no empty hostnames
+      (is (nil? (get acc 0)))
+      ;; Let' verify we got the right data
+      (is (= {971841386  {:time 39, :icon nil, :host "numergent.com"},
+              -915908674 {:time 4, :icon nil, :host "www.kitco.com"}}
+             acc))
+      ))
+  )
 
 
 (deftest test-accumulate-after-clean-up

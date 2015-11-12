@@ -48,7 +48,8 @@
     (-> (dommy/create-element :a)
         (dommy/set-attr! :href url)
         (.-hostname)
-        (lower-case))))
+        lower-case
+        trim)))
 
 (defn protocol
   "Returns the protocol for a URL"
