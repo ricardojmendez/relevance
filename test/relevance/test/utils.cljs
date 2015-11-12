@@ -37,7 +37,18 @@
                -596725840 "https://www.google.com/somePath?q=v"
                -327774960 "http://numergent.com/tags/khroma/"
                -526558523 "http://numergent.com/opensource/"
-               )
+               93819220 "about:blank"
+               ))
+
+(deftest test-host-key
+  (are [k url] (= k (utils/host-key url))
+               -702889725 "www.google.com"
+               -702889725 "www.Google.com"
+               971841386 "numergent.com"
+               -292940973 "www.numergent.com"
+               0 ""
+               0 "   "
+               0 nil)
   )
 
 (deftest test-time-display

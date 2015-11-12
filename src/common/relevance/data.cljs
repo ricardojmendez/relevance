@@ -7,12 +7,15 @@
   [url-times]
   (->>
     (group-by #(hostname (:url %)) (vals url-times))
-    (into {} (map #(vector (host-key (key %))
-                           (hash-map :host (key %)
-                                     :time (apply + (map :time (val %)))
-                                     :icon (:icon (first (val %))))
-                           )))
-    ))
+    (remove #(empty? (key %)))
+    (map #(vector (host-key (key %))
+                  (hash-map :host (key %)
+                            :time (apply + (map :time (val %)))
+                            :icon (:icon (first (val %))))
+                  ))
+    (into {})
+    )
+  )
 
 
 (defn time-clean-up
