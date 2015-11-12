@@ -37,6 +37,7 @@
                -596725840 "https://www.google.com/somePath?q=v"
                -327774960 "http://numergent.com/tags/khroma/"
                -526558523 "http://numergent.com/opensource/"
+               93819220 "about:blank"
                ))
 
 (deftest test-host-key
