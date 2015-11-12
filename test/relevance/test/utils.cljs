@@ -38,6 +38,7 @@
                -327774960 "http://numergent.com/tags/khroma/"
                -526558523 "http://numergent.com/opensource/"
                93819220 "about:blank"
+               -847465478 "file:///Users/ricardo/Sources/user.html"
                ))
 
 (deftest test-host-key
@@ -85,6 +86,7 @@
                   "about:blank" ""
                   "chrome://extensions/?id=okhigbflgnbihoiokilagelkalkcigfp" "extensions"
                   "chrome-extension://okhigbflgnbihoiokilagelkalkcigfp/index.html" "okhigbflgnbihoiokilagelkalkcigfp"
+                  "file:///Users/ricardo/Sources/user.html" ""
                   "" ""
                   nil nil
                   ))
