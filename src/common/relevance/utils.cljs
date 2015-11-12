@@ -1,6 +1,6 @@
 (ns relevance.utils
   (:require [cljs.core.async :refer [<!]]
-            [clojure.string :refer [lower-case]]
+            [clojure.string :refer [lower-case trim]]
             [dommy.core :as dommy]
             [cognitect.transit :as transit])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
@@ -66,7 +66,9 @@
        (some? (re-find #"\bhttps?:" (protocol url)))))
 
 (defn host-key [host]
-  (hash-string host))
+  (if (not-empty host)
+    (hash-string (trim (lower-case host)))
+    0))
 
 (defn url-key
   "Shortens a URL to remove anchor and protocol, and returns an integer based on
