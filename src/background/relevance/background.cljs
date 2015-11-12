@@ -138,14 +138,21 @@
   :data-load
   (fn [app-state [_ loaded]]
     (let [migrated  (migrations/migrate-to-latest loaded)
+          t         (now)
           new-urls  (->
                       (:url-times migrated)
-                      (data/time-clean-up (- (now) (* 7 ms-day)) 30)
-                      (data/time-clean-up (- (now) (* 14 ms-day)) 90)
-                      (data/time-clean-up (- (now) (* 30 ms-day)) 300))
+                      (data/time-clean-up (- t (* 7 ms-day)) 30)
+                      (data/time-clean-up (- t (* 14 ms-day)) 90)
+                      (data/time-clean-up (- t (* 30 ms-day)) 300))
+          site-data (:site-times migrated)
           new-sites (if (not= new-urls (:url-times migrated))
-                      (data/accumulate-site-times new-urls)
-                      (:site-times migrated))
+                      (->>
+                        ;; Accumulate site times but preserve the icons we had before
+                        (data/accumulate-site-times new-urls)
+                        (map #(vector (key %)
+                                      (assoc (val %) :icon (get-in site-data [(key %) :icon]))))
+                        (into {}))
+                      site-data)
           new-data  (assoc migrated :url-times new-urls :site-times new-sites)]
       ; (console/trace "Data load" loaded "migrated" new-data)
       ;; Save the migrated data we just received
@@ -350,8 +357,7 @@
             (go (dispatch [:handle-activation
                            (first (<! (tabs/query {:active true :windowId windowId})))])))
           (assoc app-state :active-tab nil))
-        app-state)
-      )
+        app-state))
     ))
 
 
