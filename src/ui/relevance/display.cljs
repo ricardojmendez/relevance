@@ -330,8 +330,7 @@
        ])))
 
 (defn data-import []
-  (let [path        [:app-state :import]
-        import-data (subscribe path)]
+  (let [import-data (reagent/atom "")]
     (fn []
       [:div {:class "col-sm-10 col-sm-offset-1"}
        [:div {:class "page-header"} [:h2 "Import data"]]
@@ -341,7 +340,7 @@
        [:textarea {:class     "form-control"
                    :rows      30
                    :value     @import-data
-                   :on-change #(dispatch [:app-state-item path (-> % .-target .-value)])}]
+                   :on-change #(reset! import-data (-> % .-target .-value))}]
        [:a {:class    "btn btn-danger btn-sm"
             :on-click #(dispatch [:data-import @import-data])} "Import"]
        ])))
