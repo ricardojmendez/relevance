@@ -37,24 +37,41 @@
                -596725840 "https://www.google.com/somePath?q=v"
                -327774960 "http://numergent.com/tags/khroma/"
                -526558523 "http://numergent.com/opensource/"
-               )
+               93819220 "about:blank"
+               -847465478 "file:///Users/ricardo/Sources/user.html"
+               ))
+
+(deftest test-host-key
+  (are [k url] (= k (utils/host-key url))
+               -702889725 "www.google.com"
+               -702889725 "www.Google.com"
+               971841386 "numergent.com"
+               -292940973 "www.numergent.com"
+               0 ""
+               0 "   "
+               0 nil)
   )
 
 (deftest test-time-display
   (are [time label] (= (utils/time-display time) label)
-                    500 "< 1s"
-                    999 "< 1s"
-                    1000 "1s"
-                    1001 "1s"
-                    1999 "1s"
-                    3742 "3s"
-                    49231 "49s"
-                    124076 "2min 4s"
-                    762661 "12min 42s"
-                    8659266 "2h 24min"
-                    86592666 "1d 0h"
-                    124076042 "1d 10h"
-                    248996042 "2d 21h"
+                    0 "< 1s"
+                    0.999 "< 1s"
+                    1 "1s"
+                    3 "3s"
+                    49 "49s"
+                    60 "1min"
+                    61 "1min 1s"
+                    119 "1min 59s"
+                    120 "2min"
+                    124 "2min 4s"
+                    762 "12min 42s"
+                    3600 "1h"
+                    3610 "1h"
+                    3660 "1h 1min"
+                    8659 "2h 24min"
+                    86592 "1d"
+                    124076 "1d 10h"
+                    248996 "2d 21h"
                     ))
 
 (deftest test-host
@@ -69,6 +86,7 @@
                   "about:blank" ""
                   "chrome://extensions/?id=okhigbflgnbihoiokilagelkalkcigfp" "extensions"
                   "chrome-extension://okhigbflgnbihoiokilagelkalkcigfp/index.html" "okhigbflgnbihoiokilagelkalkcigfp"
+                  "file:///Users/ricardo/Sources/user.html" ""
                   "" ""
                   nil nil
                   ))

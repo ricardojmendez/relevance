@@ -1,8 +1,24 @@
 (ns relevance.utils
   (:require [cljs.core.async :refer [<!]]
+            [clojure.string :refer [lower-case trim]]
             [dommy.core :as dommy]
             [cognitect.transit :as transit])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+
+
+
+;;;;-------------------------------------
+;;;; Values
+;;;;-------------------------------------
+
+
+(def ms-hour (* 60 60 1000))
+(def ms-day 86400000)
+(def ms-week (* 7 ms-day))
+
+;;;;-------------------------------------
+;;;; Functions
+;;;;-------------------------------------
 
 
 (defn on-channel
@@ -31,7 +47,9 @@
   (when url
     (-> (dommy/create-element :a)
         (dommy/set-attr! :href url)
-        (.-hostname))))
+        (.-hostname)
+        lower-case
+        trim)))
 
 (defn protocol
   "Returns the protocol for a URL"
@@ -39,7 +57,8 @@
   (when url
     (-> (dommy/create-element :a)
         (dommy/set-attr! :href url)
-        (.-protocol))))
+        (.-protocol)
+        (lower-case))))
 
 (defn is-http?
   "Returns true if the string starts with http: or https:"
@@ -48,7 +67,9 @@
        (some? (re-find #"\bhttps?:" (protocol url)))))
 
 (defn host-key [host]
-  (hash-string host))
+  (if (not-empty host)
+    (hash-string (trim (lower-case host)))
+    0))
 
 (defn url-key
   "Shortens a URL to remove anchor and protocol, and returns an integer based on
@@ -64,13 +85,15 @@
 
 (defn time-display
   "Returns a display string for a number of milliseconds"
-  [millis]
-  (let [seconds (quot millis 1000)]
+  [seconds]
+  (letfn [(time-label [major major-label minor minor-label]
+            (apply str (concat [major major-label]
+                               (when (< 0 minor) [" " minor minor-label]))))]
     (cond
       (< seconds 1) "< 1s"
       (< seconds 60) (str seconds "s")
-      (< seconds 3600) (str (quot seconds 60) "min " (rem seconds 60) "s")
-      (< seconds 86400) (str (quot seconds 3600) "h " (quot (rem seconds 3600) 60) "min")
-      ;; TODO: 86592666 is returning "1d 0h", we should elide the lowest if it's 0
-      :else (str (quot seconds 86400) "d " (quot (rem seconds 86400) 3600) "h"))
-    ))
+      (< seconds 3600) (time-label (quot seconds 60) "min" (rem seconds 60) "s")
+      (< seconds 86400) (time-label (quot seconds 3600) "h" (quot (rem seconds 3600) 60) "min")
+      :else (time-label (quot seconds 86400) "d" (quot (rem seconds 86400) 3600) "h"))
+    )
+  )

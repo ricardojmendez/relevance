@@ -1,5 +1,6 @@
 (ns relevance.display
-  (:require [relevance.utils :refer [on-channel from-transit time-display host-key hostname]]
+  (:require [relevance.utils :refer [on-channel from-transit time-display host-key hostname
+                                     ms-hour ms-day ms-week]]
             [cljs.core.async :refer [>! <!]]
             [cljs.core :refer [random-uuid]]
             [cljsjs.react-bootstrap]
@@ -47,7 +48,7 @@
 
 
 ;; Tab items we actually care about
-(def relevant-tab-items [:index :url :title :favIconUrl])
+(def relevant-tab-items [:index :url :title :icon])
 
 
 ;;;;----------------------------
@@ -57,6 +58,7 @@
 (register-handler
   :app-state-item
   (fn [app-state [_ path item]]
+    (js/ga "send" "screenview" #js {:screenName (name item)})
     (assoc-in app-state path item)))
 
 
@@ -119,32 +121,38 @@
    [:a {:on-click #(dispatch [:app-state-item [:ui-state :section] section])} label
     (when (= section current) [:span {:class "sr-only"} "(current)"])]])
 
-(defn navbar []
+(defn nav-left-item [label class section current]
+  [:li {:class (when (= section current) "active")}
+   [:a {:on-click #(dispatch [:app-state-item [:ui-state :section] section])}
+    [:i {:class class}]
+    [:p label]
+    ]]
+  )
+
+(defn nav-left []
   (let [section (subscribe [:ui-state :section])]
     (fn []
-      [:nav {:class "navbar navbar-default"}
-       [:div {:class "container-fluid"}
-        [:div {:class "navbar-header"}
-         [:button {:type "button", :class "navbar-toggle collapsed", :data-toggle "collapse", :data-target "#bs-example-navbar-collapse-1"}
-          [:span {:class "sr-only"} "Toggle navigation"]
-          [:span {:class "icon-bar"}]
-          [:span {:class "icon-bar"}]
-          [:span {:class "icon-bar"}]]
-         [:a {:class "navbar-brand" :href "http://numergent.com" :target "_blank"} "Relevance"]]
-        [:div {:class "collapse navbar-collapse", :id "bs-example-navbar-collapse-1"}
-         [:ul {:class "nav navbar-nav"}
-          [navbar-item "Introduction" :intro @section]
-          [navbar-item "Times per page" :url-times @section]
-          [navbar-item "Times per site" :site-times @section]
-          ]
-         #_[:form {:class "navbar-form navbar-left", :role "search"}
-            [:div {:class "form-group"}
-             [:input {:type "text", :class "form-control", :placeholder "Search"}]]
-            [:button {:type "submit", :class "btn btn-default"} "Submit"]]
-         [:ul {:class "nav navbar-nav navbar-right"}
-          [navbar-item "Export" :export @section]
-          [navbar-item "Import" :import @section]]]]])))
+      [:ul {:class "nav"}
+       (nav-left-item "Introduction" "pe-7s-home" :intro @section)
+       (nav-left-item "Page times" "pe-7s-note2" :url-times @section)
+       (nav-left-item "Site times" "pe-7s-note2" :site-times @section)
+       (nav-left-item "Export data" "pe-7s-box1" :export @section)
+       (nav-left-item "Import data" "pe-7s-attention" :import @section)]))
+  )
 
+(defn nav-top []
+  (let [section (subscribe [:ui-state :section])]
+    (fn []
+      [:div {:class "navbar-header"}
+       [:a {:class "navbar-brand"}
+        (condp = @section
+          :intro "About Relevance"
+          :url-times "Time reading a page"
+          :site-times "Time visiting a site"
+          :export "Export your Relevance data"
+          :import "Import a Relevance backup"
+          "")
+        ]])))
 
 ;; We could actually move modal-confirm to a component namespace, parametrize it.
 (defn modal-confirm []
@@ -174,18 +182,41 @@
     (map-indexed
       (fn [i tab]
         (let [url     (:url tab)
-              favicon (:favIconUrl (get site-data (host-key (hostname url))))]
+              favicon (:icon (get site-data (host-key (hostname url))))
+              title   (:title tab)
+              label   (if (empty? title)
+                        url
+                        title)
+              display (if (< 100 (count label))
+                        (apply str (concat (take 100 label) "..."))
+                        label)
+              age-ms  (- (.now js/Date) (:ts tab))
+              ;; Colors picked at http://www.w3schools.com/tags/ref_colorpicker.asp
+              color   (cond
+                        (< age-ms ms-hour) "#00ff00"
+                        (< age-ms ms-day) "#00cc00"
+                        (< age-ms (* 3 ms-day)) "#009900"
+                        (< age-ms (* 7 ms-day)) "#ff8000"
+                        (< age-ms (* 14 ms-day)) "#cc6600"
+                        :else "#994c00"
+                        )
+                      ]
           ^{:key i}
           [:tr
-           [:td {:class "col-sm-1"} (time-display (:time tab))]
-           [:td {:class "col-sm-6"} [:a
-                                     {:href url :target "_blank"}
-                                     (if favicon
-                                       [:img {:src    favicon
-                                              :width  16
-                                              :height 16}])
-                                     (:title tab)]]
-           [:td {:class "col-sm-5"} url]])))))
+           [:td {:class "col-sm-2"}
+            (time-display (:time tab))]
+           [:td {:class "col-sm-8"}
+            [:a
+             {:href url :target "_blank"}
+             (if favicon
+               [:img {:src    favicon
+                      :width  16
+                      :height 16}])
+             display]]
+           [:td {:class "col-sm-2"}
+            [:i (merge {:class "fa fa-circle" :style {:color color}})]
+            (time-display (quot age-ms 1000))]
+           ])))))
 
 
 (defn div-urltimes []
@@ -194,17 +225,51 @@
         url-values (reaction (filter-tabs (vals @url-times)))
         to-list    (reaction (sort-by #(* -1 (:time %)) @url-values))]
     (fn []
-      [:div
-       [:div {:class "page-header"} [:h2 "Times"]]
-       [:table {:class "table table-striped table-hover"}
-        [:thead
-         [:tr
-          [:th "#"]
-          [:th "Title"]
-          [:th "URL"]]]
-        [:tbody
-         (list-urls @to-list @site-times)]
-        ]])
+      [:div {:class "row"}
+       [:div {:class "card"}
+        [:div {:class "content table-responsive table-full-width"}
+         [:table {:class "table table-striped table-hover"}
+          [:thead
+           [:tr
+            [:th "Time"]
+            [:th "Title"]
+            [:th "Last visit"]]]
+          [:tbody
+           (list-urls @to-list @site-times)
+           ]]]]
+       ])
+    ))
+
+(defn div-sitetimes []
+  (let [site-times (subscribe [:data :site-times])
+        sites      (reaction (vals @site-times))
+        to-list    (reaction (sort-by #(* -1 (:time %)) @sites))]
+    (fn []
+      [:div {:class "row"}
+       [:div {:class "card"}
+        [:div {:class "content table-responsive table-full-width"}
+         [:table {:class "table table-striped table-hover"}
+          [:thead
+           [:tr
+            [:th "Time"]
+            [:th "Site"]]]
+          [:tbody
+           (->>
+             @to-list
+             (map-indexed
+               (fn [i site]
+                 (let [url  (:host site)
+                       icon (:icon site)]
+                   ^{:key i}
+                   [:tr
+                    [:td {:class "col-sm-1"} (time-display (:time site))]
+                    [:td {:class "col-sm-6"} (if icon
+                                               [:img {:src    icon
+                                                      :width  16
+                                                      :height 16}])
+                     url]
+                    ]))))]
+          ]]]])
     ))
 
 (defn div-intro []
@@ -213,12 +278,13 @@
     [:h1 "Welcome!"]]
    [:div {:class "col-sm-10 col-sm-offset-1"}
     [:h2 "Thanks for installing Relevance"]
+    [:p "Relevance is a smart tab organizer. It’s nonintrusive and fully private. When you activate it your tabs are sorted based on the duration you are actively viewing it combined with the total time you actively browse pages on that domain. It will allow you to discover greater insights about your browsing habits."]
+    [:p "Relevance will keep track of the pages you actually read, and how long you spend reading them. This information is kept completely private, on your local browser. As you open tabs, its knowledge of what's important to you grows, and when you activate it the tabs  for your current window are ordered depending on how long you have spent reading them."]
+    [:p "This creates a natural arrangement where the tabs you have spent the longest on, which are expected to be the most relevant, are placed first, and the ones you haven't read at all are shunted to the end."]
     [:p "I'm a tab-aholic. I normally do a search, start opening the tabs that seem interesting, and then as I flip through them, I end up opening even more links on tabs as they seem relevant."]
     [:p "Next thing I know I have a huge mess of tabs, and it's hard to remember which one I've read, or which one is more relevant."]
-    [:p "I wrote Relevance to help manage that."]
-    [:p "When you install Relevance, it'll keep track of the pages you actually read, and how long you spend reading them. This information is kept completely private, on your local browser. As you open tabs, its knowledge of what's important to you grows, and when you activate it, the tabs  for your current window are ordered depending on how long you have spent reading them."]
-    [:p "This ordering creates a natural arrangement where the tabs you have spent the longest on, which are expected to be the most relevant, are placed first, and the ones you haven't read at all are shunted to the end."]
-    [:p "I've found this very useful in organizing what I should be focusing on."]]
+    [:p "I wrote Relevance to help manage that. I've found it very useful in organizing what I should be focusing on, and I hope it'l be useful for you as well."]
+    ]
    [:div {:class "col-sm-10 col-sm-offset-1"}
     [:h2 "Preview software"]
     [:p "Relevance is a software preview, and I'll be happy to hear your comments. If you have any suggestions on what you think might make Relevance better, "
@@ -250,42 +316,11 @@
    ]
   )
 
-(defn div-sitetimes []
-  (let [site-times (subscribe [:data :site-times])
-        sites      (reaction (vals @site-times))
-        to-list    (reaction (sort-by #(* -1 (:time %)) @sites))]
-    (fn []
-      [:div
-       [:div {:class "page-header"} [:h2 "Times"]]
-       [:table {:class "table table-striped table-hover"}
-        [:thead
-         [:tr
-          [:th "#"]
-          [:th "Site"]]]
-        [:tbody
-         (->>
-           @to-list
-           (map-indexed
-             (fn [i site]
-               (let [url     (:host site)
-                     favicon (:favIconUrl site)]
-                 ^{:key i}
-                 [:tr
-                  [:td {:class "col-sm-1"} (time-display (:time site))]
-                  [:td {:class "col-sm-6"} (if favicon
-                                             [:img {:src    favicon
-                                                    :width  16
-                                                    :height 16}])
-                   url]
-                  ]))))]
-        ]])
-    ))
-
 
 (defn data-export []
   (let [data (subscribe [:raw-data])]
     (fn []
-      [:div
+      [:div {:class "col-sm-10 col-sm-offset-1"}
        [:div {:class "page-header"} [:h2 "Current data"]]
        [:p (str "Copy the text below to a safe location. Size: " (count @data))]
        [:textarea {:class     "form-control"
@@ -296,10 +331,9 @@
        ])))
 
 (defn data-import []
-  (let [path        [:app-state :import]
-        import-data (subscribe path)]
+  (let [import-data (reagent/atom "")]
     (fn []
-      [:div
+      [:div {:class "col-sm-10 col-sm-offset-1"}
        [:div {:class "page-header"} [:h2 "Import data"]]
        [:div {:class "alert alert-warning"}
         [:h4 "Warning!"]
@@ -307,7 +341,7 @@
        [:textarea {:class     "form-control"
                    :rows      30
                    :value     @import-data
-                   :on-change #(dispatch [:app-state-item path (-> % .-target .-value)])}]
+                   :on-change #(reset! import-data (-> % .-target .-value))}]
        [:a {:class    "btn btn-danger btn-sm"
             :on-click #(dispatch [:data-import @import-data])} "Import"]
        ])))
@@ -334,7 +368,8 @@
 
 
 (defn mount-components []
-  (reagent/render-component [navbar] (.getElementById js/document "navbar"))
+  (reagent/render-component [nav-left] (.getElementById js/document "nav-left"))
+  (reagent/render-component [nav-top] (.getElementById js/document "nav-top"))
   (reagent/render-component [main-section] (.getElementById js/document "main-section")))
 
 

@@ -2,6 +2,31 @@
   (:require [relevance.utils :refer [url-key host-key hostname]]))
 
 
+(defn accumulate-site-times
+  "Accumulates the total time for a site from a hashmap of URL times"
+  [url-times]
+  (->>
+    (group-by #(hostname (:url %)) (vals url-times))
+    (remove #(empty? (key %)))
+    (map #(vector (host-key (key %))
+                  (hash-map :host (key %)
+                            :time (apply + (map :time (val %)))
+                            :icon (:icon (first (val %))))
+                  ))
+    (into {})
+    )
+  )
+
+
+(defn time-clean-up
+  "Removes from url-times all the items that are older than cut-off-ts
+  and which were viewed for less than min-seconds"
+  [url-times cut-off-ts min-seconds]
+  (into {} (remove #(and (< (:ts (val %))
+                            cut-off-ts)
+                         (< (:time (val %)) min-seconds))
+                   url-times)))
+
 (defn track-url-time
   "Receives a url time database, a tab record and a time to track, and returns
   new time database which is the result of adding the time to the URL. It also
@@ -10,13 +35,14 @@
   (let [url      (or (:url tab) "")
         id       (url-key url)
         url-item (or (get url-times id)
-                     {:url       url
-                      :time      0
-                      :timestamp 0})
-        track?   (not= 0 id)
+                     {:url  url
+                      :time 0
+                      :ts   0})
+        track?   (and (not= 0 id)
+                      (< 0 time))
         new-item (assoc url-item :time (+ (:time url-item) time)
                                  :title (:title tab)
-                                 :timestamp timestamp)]
+                                 :ts timestamp)]
     (if track?
       (assoc url-times id new-item)
       url-times)))
@@ -31,13 +57,14 @@
   (let [host      (hostname (or (:url tab) ""))
         id        (host-key host)
         site-item (or (get site-times id)
-                      {:host      host
-                       :time      0
-                       :timestamp 0})
-        track?    (not= 0 id)
+                      {:host host
+                       :time 0
+                       :ts   0})
+        track?    (and (not= 0 id)
+                       (< 0 time))
         new-item  (assoc site-item :time (+ (:time site-item) time)
-                                   :favIconUrl (:favIconUrl tab)
-                                   :timestamp timestamp)]
+                                   :icon (:favIconUrl tab)
+                                   :ts timestamp)]
     (if track?
       (assoc site-times id new-item)
       site-times)))
