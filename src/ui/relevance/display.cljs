@@ -58,6 +58,7 @@
 (register-handler
   :app-state-item
   (fn [app-state [_ path item]]
+    (js/ga "send" "screenview" #js {:screenName (name item)})
     (assoc-in app-state path item)))
 
 
