@@ -185,6 +185,26 @@
           result (data/track-url-time (:url-times test-db) tab 9 ts)]
       (is (= result (:url-times test-db)))
       ))
+  (testing "Attempting to add time to an ignored URL causes no changes"
+    ;; Repeating almost the exact same test as when we tracked the time for
+    ;; Numergent, only passing it as an ignore domain now.
+    (let [tab         {:url        "http://numergent.com/"
+                       :title      "Numergent limited"
+                       :favIconUrl "http://numergent.com/favicon.png"}
+          ts          1445964037799
+          with-ignore (data/track-url-time (:url-times test-db) tab 9 ts
+                                           :ignore-set #{"localhost" "somedomain.com" "numergent.com"})
+          no-ignore   (data/track-url-time (:url-times test-db) tab 9 ts
+                                           :ignore-set #{"localhost" "somedomain.com"})
+          tab-key     (utils/url-key "http://numergent.com/")
+          item        (get with-ignore tab-key)]
+      (is with-ignore)
+      (is (nil? item))
+      (is (= with-ignore (:url-times test-db)) "URL times should not have been altered")
+      (is (not= with-ignore no-ignore) "Removing the domain from the ignore list should result on the element being added")
+      (is (= (count no-ignore) (inc (count with-ignore))) "Result without ignoring the element should have one more value")
+      )
+    )
   )
 
 
@@ -207,7 +227,11 @@
                              (:favIconUrl tab) (:icon item)
                              "numergent.com" (:host item)
                              ts (:ts item)
-                             1234 (:time item)))
+                             1234 (:time item))
+      ;; Let's make sure we did not break anything while adding an ignore parameter
+      (is (= result (data/track-site-time {} tab 1234 ts :ignore-set #{"localhost" "newtab"}))
+          "The result should be the same even if we pass an ignore-set")
+      )
     )
   (testing "Add time to an existing database for an existing site"
     (let [tab    {:url        "http://numergent.com/opensource/index.html"
@@ -230,7 +254,12 @@
                              147 (:time item))
       (doseq [other (dissoc result id)]
         (is (= (val other) (get (:site-times test-db) (key other))) "Other items should have remained untouched")
-        )))
+        )
+      ;; Let's make sure we did not break anything while adding an ignore parameter
+      (is (= result (data/track-site-time (:site-times test-db) tab 3 ts
+                                          :ignore-set #{"localhost" "newtab"}))
+          "The result should be the same even if we pass an ignore-set")
+      ))
   (testing "Add time to an existing database for a new site"
     (let [tab    {:url        "https://twitter.com/ArgesRic"
                   :title      "ArgesRic"
@@ -252,7 +281,13 @@
                              9 (:time item))
       (doseq [other (dissoc result id)]
         (is (= (val other) (get (:site-times test-db) (key other))) "Other items should have remained untouched")
-        ))
+        )
+      ;; Then, let's make sure we did not break anything while adding an ignore parameter
+      (is (= result
+             (data/track-site-time (:site-times test-db) tab 9 ts
+                                   :ignore-set #{"localhost" "somedomain.com"})))
+      )
+
     )
   (testing "Add zero time should not result on any changes"
     (let [tab    {:url        "https://twitter.com/ArgesRic"
@@ -278,6 +313,28 @@
                                        ts)]
       (is result)
       (is (= result (:site-times test-db)))))
+  (testing "Add time to an ignored site does not change the database"
+    ;; Repeating almost the exact same test as when we tracked the time for
+    ;; Numergent, only passing it as an ignore domain now.
+    (let [tab         {:url        "http://numergent.com/opensource/index.html"
+                       :title      "Further open source project details"
+                       :favIconUrl "http://numergent.com/newfavicon.png"}
+          ts          1445964037900
+          with-ignore (data/track-site-time (:site-times test-db) tab 3 ts
+                                            :ignore-set #{"localhost" "somedomain.com" "numergent.com"})
+          no-ignore   (data/track-site-time (:site-times test-db) tab 3 ts
+                                            :ignore-set #{"localhost" "somedomain.com"})
+          id          (utils/host-key (utils/hostname "http://numergent.com/opensource/"))
+          item        (get no-ignore id)]
+      (is with-ignore)
+      (is (= with-ignore (:site-times test-db)))
+      (is (not= with-ignore no-ignore))
+      ;; Then let's verify the values on the one we actually added
+      (are [expected result] (= expected result)
+                             (:favIconUrl tab) (:icon item)
+                             "numergent.com" (:host item)
+                             ts (:ts item)
+                             147 (:time item))))
   )
 
 
