@@ -18,7 +18,7 @@
   )
 
 
-(defn time-clean-up
+(defn clean-up-by-time
   "Removes from url-times all the items that are older than cut-off-ts
   and which were viewed for less than min-seconds"
   [url-times cut-off-ts min-seconds]
@@ -26,6 +26,14 @@
                             cut-off-ts)
                          (< (:time (val %)) min-seconds))
                    url-times)))
+
+(defn clean-up-ignored
+  "Removes from url-times all the items for which the domain
+  matches an ignore set"
+  [url-times ignore-set]
+  (into {} (remove #(contains? ignore-set (hostname (:url (val %))))
+                   url-times))
+  )
 
 (defn track-url-time
   "Receives a url time database, a tab record and a time to track, and returns

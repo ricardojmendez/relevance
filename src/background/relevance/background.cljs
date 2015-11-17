@@ -29,8 +29,9 @@
 (def relevant-tab-keys [:windowId :id :active :url :start-time :title :favIconUrl])
 (def select-tab-keys #(select-keys % relevant-tab-keys))
 
-(defn now [] (.now js/Date))
+(def default-ignore-set #{"localhost" "newtab"})
 
+(defn now [] (.now js/Date))
 
 
 ;;;;-------------------------------------
@@ -137,23 +138,25 @@
 (register-handler
   :data-load
   (fn [app-state [_ loaded]]
-    (let [migrated  (migrations/migrate-to-latest loaded)
-          t         (now)
-          new-urls  (->
-                      (:url-times migrated)
-                      (data/time-clean-up (- t (* 7 ms-day)) 30)
-                      (data/time-clean-up (- t (* 14 ms-day)) 90)
-                      (data/time-clean-up (- t (* 30 ms-day)) 300))
-          site-data (:site-times migrated)
-          new-sites (if (not= new-urls (:url-times migrated))
-                      (->>
-                        ;; Accumulate site times but preserve the icons we had before
-                        (data/accumulate-site-times new-urls)
-                        (map #(vector (key %)
-                                      (assoc (val %) :icon (get-in site-data [(key %) :icon]))))
-                        (into {}))
-                      site-data)
-          new-data  (assoc migrated :url-times new-urls :site-times new-sites)]
+    (let [migrated   (migrations/migrate-to-latest loaded)
+          t          (now)
+          ignore-set (or (:ignore-set migrated) default-ignore-set)
+          new-urls   (->
+                       (:url-times migrated)
+                       (data/clean-up-by-time (- t (* 7 ms-day)) 30)
+                       (data/clean-up-by-time (- t (* 14 ms-day)) 90)
+                       (data/clean-up-by-time (- t (* 30 ms-day)) 300)
+                       (data/clean-up-ignored ignore-set))
+          site-data  (:site-times migrated)
+          new-sites  (if (not= new-urls (:url-times migrated))
+                       (->>
+                         ;; Accumulate site times but preserve the icons we had before
+                         (data/accumulate-site-times new-urls)
+                         (map #(vector (key %)
+                                       (assoc (val %) :icon (get-in site-data [(key %) :icon]))))
+                         (into {}))
+                       site-data)
+          new-data   (assoc migrated :url-times new-urls :site-times new-sites :ignore-set ignore-set)]
       ; (console/trace "Data load" loaded "migrated" new-data)
       ;; Save the migrated data we just received
       (io/save new-data)

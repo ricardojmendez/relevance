@@ -338,10 +338,10 @@
   )
 
 
-(deftest test-time-clean-up
+(deftest test-clean-up-by-time
   (testing "Clean up date and minimum time are respected"
     (let [min-date 1446028215913
-          pruned   (data/time-clean-up (:url-times test-db) min-date 30)]
+          pruned   (data/clean-up-by-time (:url-times test-db) min-date 30)]
       (is pruned)
       (is (= 5 (count pruned)))
       ;; We removed the right elements
@@ -352,7 +352,7 @@
       ))
   (testing "Timestamp filtering is only on strictly greater than"
     (let [min-date 1446114615912
-          pruned   (data/time-clean-up (:url-times test-db) min-date 30)]
+          pruned   (data/clean-up-by-time (:url-times test-db) min-date 30)]
       (is pruned)
       (is (= 3 (count pruned)))
       ;; getprismatic is still there
@@ -363,7 +363,7 @@
       ))
   (testing "Cut-off seconds are respected when filtering"
     (let [min-date 1446114615912
-          pruned   (data/time-clean-up (:url-times test-db) min-date 28)]
+          pruned   (data/clean-up-by-time (:url-times test-db) min-date 28)]
       (is pruned)
       (is (= 4 (count pruned)))
       ;; getprismatic is still there
@@ -371,12 +371,33 @@
       ;; ... and we didn' lose splunk
       (is (get pruned (utils/url-key "http://splunk.com/"))))
     (let [min-date 1446114615913
-          pruned   (data/time-clean-up (:url-times test-db) min-date 50)]
+          pruned   (data/clean-up-by-time (:url-times test-db) min-date 50)]
       (is pruned)
       (is (= 2 (count pruned)))
       (is (= #{-327774960 -327358142}
              (into #{} (keys pruned)))))
     ))
+
+(deftest test-clean-up-ignored
+  (let [url-times (:url-times test-db)]
+    (is (= url-times
+           (data/clean-up-ignored url-times #{}))
+        "Passing an empty set should not change things")
+    (is (= url-times
+           (data/clean-up-ignored url-times #{"localhost" "somedomain.com"}))
+        "Passing a set of not-matching domain does not change things")
+    ;; Test removing a domain
+    (let [result (data/clean-up-ignored url-times #{"localhost" "numergent.com"})]
+      (is (= result (dissoc url-times -327774960 -526558523))
+          "We should have removed the numergent-associated urls")
+      (is (= 5 (count result))))
+    ;; Test removing multiple domains
+    (let [result (data/clean-up-ignored url-times #{"localhost" "getprismatic.com" "numergent.com"})]
+      (is (= result (dissoc url-times -327774960 -526558523 1609181525))
+          "We should have removed the numergent-associated urls")
+      (is (= 4 (count result))))
+    ))
+
 
 (deftest test-accumulate-site-times
   (testing "Accumulate site times creates a total but doesn't add favicons"
@@ -419,7 +440,7 @@
 (deftest test-accumulate-after-clean-up
   (testing "We get a value accumulation per site time after clean up"
     (let [min-date   1446114615912
-          pruned     (data/time-clean-up (:url-times test-db) min-date 30)
+          pruned     (data/clean-up-by-time (:url-times test-db) min-date 30)
           site-times (data/accumulate-site-times pruned)]
       (is pruned)
       (is (= {971841386  {:icon nil
