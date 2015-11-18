@@ -143,8 +143,8 @@
           new-urls   (->
                        (:url-times migrated)
                        (data/clean-up-by-time (- t (* 7 ms-day)) 30)
-                       (data/clean-up-by-time (- t (* 14 ms-day)) 90)
-                       (data/clean-up-by-time (- t (* 30 ms-day)) 300)
+                       (data/clean-up-by-time (- t (* 14 ms-day)) 300)
+                       (data/clean-up-by-time (- t (* 30 ms-day)) 1800)
                        (data/clean-up-ignored ignore-set))
           site-data  (:site-times migrated)
           new-sites  (if (not= new-urls (:url-times migrated))
