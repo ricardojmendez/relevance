@@ -212,7 +212,7 @@
                 label   (if (empty? title)
                           url
                           title)
-                display (if (and (empty? title)
+                display (if (and (= url label)
                                  (< 80 (count label)))
                           (apply str (concat (take 80 label) "..."))
                           label)
