@@ -46,11 +46,6 @@
   [tabs]
   (remove #(.startsWith (:url %) "chrome") tabs))
 
-
-;; Tab items we actually care about
-(def relevant-tab-items [:index :url :title :icon])
-
-
 ;;;;----------------------------
 ;;;; Handlers
 ;;;;----------------------------
@@ -115,11 +110,6 @@
 ;;;; Components
 ;;;;----------------------------
 
-
-(defn navbar-item [label section current]
-  [:li {:class (when (= section current) "active")}
-   [:a {:on-click #(dispatch [:app-state-item [:ui-state :section] section])} label
-    (when (= section current) [:span {:class "sr-only"} "(current)"])]])
 
 (defn nav-left-item [label class section current]
   [:li {:class (when (= section current) "active")}
