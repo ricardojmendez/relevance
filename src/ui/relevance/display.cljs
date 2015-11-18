@@ -244,9 +244,11 @@
   (let [url-times  (subscribe [:data :url-times])
         site-times (subscribe [:data :site-times])
         url-values (reaction (filter-tabs (vals @url-times)))
-        to-list    (reaction (sort-by #(* -1 (:time %)) @url-values))]
+        to-list    (reaction (sort-by #(* -1 (:time %)) @url-values))
+        total      (reaction (count @to-list))]
     (fn []
       [:div {:class "row"}
+       [:p "Total: " @total " URLs."]
        [:div {:class "card"}
         [:div {:class "content table-responsive table-full-width"}
          [:table {:class "table table-striped table-hover"}
@@ -264,9 +266,11 @@
 (defn div-sitetimes []
   (let [site-times (subscribe [:data :site-times])
         sites      (reaction (vals @site-times))
-        to-list    (reaction (sort-by #(* -1 (:time %)) @sites))]
+        to-list    (reaction (sort-by #(* -1 (:time %)) @sites))
+        total      (reaction (count @to-list))]
     (fn []
       [:div {:class "row"}
+       [:p "Total: " @total " domains."]
        [:div {:class "card"}
         [:div {:class "content table-responsive table-full-width"}
          [:table {:class "table table-striped table-hover"}
