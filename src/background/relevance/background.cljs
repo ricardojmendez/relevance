@@ -4,6 +4,7 @@
             [relevance.io :as io]
             [relevance.migrations :as migrations]
             [relevance.utils :refer [on-channel url-key host-key hostname is-http? ms-day]]
+            [relevance.settings :refer [default-settings]]
             [khroma.alarms :as alarms]
             [khroma.context-menus :as menus]
             [khroma.idle :as idle]
@@ -30,7 +31,6 @@
 (def select-tab-keys #(select-keys % relevant-tab-keys))
 
 (defn now [] (.now js/Date))
-
 
 
 ;;;;-------------------------------------
@@ -118,7 +118,7 @@
   ::initialize
   (fn [_]
     (go
-      (dispatch [:data-load (<! (io/load))])
+      (dispatch [:data-load (<! (io/load :data)) (or (<! (io/load :settings)) default-settings)])
       (dispatch [::window-focus {:windowId (:id (<! (windows/get-last-focused {:populate false})))}])
       ;; We should only hook to the channels once, so we do it during the :initialize handler
       (hook-to-channels)
@@ -136,27 +136,32 @@
 
 (register-handler
   :data-load
-  (fn [app-state [_ loaded]]
-    (let [migrated  (migrations/migrate-to-latest loaded)
-          t         (now)
-          new-urls  (->
-                      (:url-times migrated)
-                      (data/time-clean-up (- t (* 7 ms-day)) 30)
-                      (data/time-clean-up (- t (* 14 ms-day)) 90)
-                      (data/time-clean-up (- t (* 30 ms-day)) 300))
-          site-data (:site-times migrated)
-          new-sites (if (not= new-urls (:url-times migrated))
-                      (->>
-                        ;; Accumulate site times but preserve the icons we had before
-                        (data/accumulate-site-times new-urls)
-                        (map #(vector (key %)
-                                      (assoc (val %) :icon (get-in site-data [(key %) :icon]))))
-                        (into {}))
-                      site-data)
-          new-data  (assoc migrated :url-times new-urls :site-times new-sites)]
-      ; (console/trace "Data load" loaded "migrated" new-data)
+  (fn [app-state [_ data settings]]
+    (let [migrated   (migrations/migrate-to-latest data)
+          t          (now)
+          ignore-set (:ignore-set settings)
+          new-urls   (->
+                       (:url-times migrated)
+                       (data/clean-up-by-time (- t (* 7 ms-day)) 30)
+                       (data/clean-up-by-time (- t (* 14 ms-day)) 90)
+                       (data/clean-up-by-time (- t (* 30 ms-day)) 300)
+                       (data/clean-up-ignored ignore-set))
+          site-data  (:site-times migrated)
+          new-sites  (if (not= new-urls (:url-times migrated))
+                       (->>
+                         ;; Accumulate site times but preserve the icons we had before
+                         (data/accumulate-site-times new-urls)
+                         (map #(vector (key %)
+                                       (assoc (val %) :icon (get-in site-data [(key %) :icon]))))
+                         (into {}))
+                       site-data)
+          new-data   (assoc migrated :url-times new-urls :site-times new-sites)]
+      ; (console/trace "Data load" data "migrated" new-data)
+      ; (console/trace "Settings" settings)
       ;; Save the migrated data we just received
-      (io/save new-data)
+      ;; We don't save the settings, since the background script does not really change them.
+      ;; That's the UI's domain.
+      (io/save :data new-data)
       ;; Process the suspend info
       (let [suspend-info (:suspend-info new-data)
             old-tab      (:active-tab suspend-info)
@@ -167,15 +172,16 @@
         (if is-same?
           (dispatch [:handle-activation old-tab (:start-time old-tab)])
           (dispatch [:handle-deactivation old-tab (:time suspend-info)])))
-      (-> app-state
-          (assoc :data (dissoc new-data :suspend-info))))))
+      (assoc app-state :data (dissoc new-data :suspend-info)
+                       :settings settings)
+      )))
 
 
 (register-handler
   :data-set
   (fn [app-state [_ key item]]
     (let [new-state (assoc-in app-state [:data key] item)]
-      (io/save (:data new-state))
+      (io/save :data (:data new-state))
       new-state)
     ))
 
@@ -262,7 +268,7 @@
   (fn [app-state [_ {:keys [message sender]}]]
     ; (console/log "GOT INTERNAL MESSAGE" message "from" sender)
     (condp = (keyword message)
-      :reload-data (go (dispatch [:data-load (<! (io/load))])))
+      :reload-data (go (dispatch [:data-load (<! (io/load :data)) (<! (io/load :settings))])))
     app-state
     ))
 
@@ -336,7 +342,7 @@
           site-times (data/track-site-time (or (:site-times data) {}) tab (quot time 1000) (now))
           new-data   (assoc data :url-times url-times :site-times site-times)]
       ; (console/trace time " milliseconds spent at " tab)
-      (io/save new-data)
+      (io/save :data new-data)
       (assoc app-state :data new-data)
       )))
 

@@ -2,7 +2,8 @@
   (:require [cljs.core.async :refer [<!]]
             [clojure.string :refer [lower-case trim]]
             [dommy.core :as dommy]
-            [cognitect.transit :as transit])
+            [cognitect.transit :as transit]
+            [clojure.string :as string])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 
@@ -82,6 +83,15 @@
       (hash-string shortened))
     0))
 
+(defn to-string-set
+  "Split a string into a string set using commas, semi-colons or new lines, and returns it as a set"
+  [s]
+  (->>
+    (string/split (or s "") #",|\n|;| ")
+    (map string/trim)
+    (remove empty?)
+    (map string/lower-case)
+    (into #{})))
 
 (defn time-display
   "Returns a display string for a number of milliseconds"
@@ -94,6 +104,5 @@
       (< seconds 60) (str seconds "s")
       (< seconds 3600) (time-label (quot seconds 60) "min" (rem seconds 60) "s")
       (< seconds 86400) (time-label (quot seconds 3600) "h" (quot (rem seconds 3600) 60) "min")
-      :else (time-label (quot seconds 86400) "d" (quot (rem seconds 86400) 3600) "h"))
-    )
+      :else (time-label (quot seconds 86400) "d" (quot (rem seconds 86400) 3600) "h")))
   )

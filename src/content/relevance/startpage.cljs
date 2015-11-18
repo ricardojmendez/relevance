@@ -41,7 +41,7 @@
 
 (defn do-transformations! []
   (go
-    (let [data  (<! (io/load))
+    (let [data  (<! (io/load :data))
           nodes (sel :.result_url_heading)
           base  (sel1 :.web_regular_results)]
       (doseq [node nodes]
