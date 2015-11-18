@@ -304,8 +304,18 @@
     [:p "I wrote Relevance to help manage that. I've found it very useful in organizing what I should be focusing on, and I hope it'l be useful for you as well."]
     ]
    [:div {:class "col-sm-10 col-sm-offset-1"}
-    [:h2 "Preview software"]
-    [:p "Relevance is a software preview, and I'll be happy to hear your comments. If you have any suggestions on what you think might make Relevance better, "
+    [:h2 "Adaptive arrangements"]
+    [:p
+     "Relevance will periodically clean up sites that you haven't spent a long time at, or that you don't visit that often."
+     "This means you can always rely on the order to be based on fresh data from your recent behavior."]
+    [:p
+     "If you want to fine-tune which sites Relevance prioritizes, you can go to the "
+     [:i "Settings"]
+     " page and add domains that Relevance should ignore when recording your habits."]
+    ]
+   [:div {:class "col-sm-10 col-sm-offset-1"}
+    [:h2 "Notes and comments"]
+    [:p "I'm actively developing Relevance, and I'll be happy to hear your comments. If you have any suggestions on what you think might make Relevance better, "
      [:a {:href "https://twitter.com/intent/tweet?text=Hey%20@argesric%20about%20&hashtags=relevance" :target "_blank"}
       "please reach out on Twitter"]
      " or "
@@ -356,13 +366,18 @@
        [:div {:class "page-header"} [:h2 "Import data"]]
        [:div {:class "alert alert-warning"}
         [:h4 "Warning!"]
-        [:p "Your entire data will be replaced with the information below."]]
-       [:textarea {:class     "form-control"
-                   :rows      30
-                   :value     @import-data
-                   :on-change #(reset! import-data (-> % .-target .-value))}]
-       [:a {:class    "btn btn-primary btn-sm"
-            :on-click #(dispatch [:data-import @import-data])} "Import"]
+        [:p "Your reading statistics be replaced with the information you enter below."]]
+       [:div {:class "row"}
+        [:textarea {:class     "form-control"
+                    :rows      30
+                    :value     @import-data
+                    :on-change #(reset! import-data (-> % .-target .-value))}]
+        ]
+
+       [:div {:class "row"}
+        [:a {:class    "btn btn-primary btn-sm"
+             :on-click #(dispatch [:data-import @import-data])} "Import"]
+        ]
        ])))
 
 (defn div-settings []
