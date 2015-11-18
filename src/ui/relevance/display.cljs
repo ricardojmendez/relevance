@@ -197,46 +197,47 @@
         ]])))
 
 (defn list-urls [urls site-data]
-  (->>
-    urls
-    (map-indexed
-      (fn [i tab]
-        (let [url     (:url tab)
-              favicon (:icon (get site-data (host-key (hostname url))))
-              title   (:title tab)
-              label   (if (empty? title)
-                        url
-                        title)
-              display (if (< 100 (count label))
-                        (apply str (concat (take 100 label) "..."))
-                        label)
-              age-ms  (- (.now js/Date) (:ts tab))
-              ;; Colors picked at http://www.w3schools.com/tags/ref_colorpicker.asp
-              color   (cond
-                        (< age-ms ms-hour) "#00ff00"
-                        (< age-ms ms-day) "#00cc00"
-                        (< age-ms (* 3 ms-day)) "#009900"
-                        (< age-ms (* 7 ms-day)) "#ff8000"
-                        (< age-ms (* 14 ms-day)) "#cc6600"
-                        :else "#994c00"
-                        )
-              ]
-          ^{:key i}
-          [:tr
-           [:td {:class "col-sm-2"}
-            (time-display (:time tab))]
-           [:td {:class "col-sm-8"}
-            [:a
-             {:href url :target "_blank"}
-             (if favicon
-               [:img {:src    favicon
-                      :width  16
-                      :height 16}])
-             display]]
-           [:td {:class "col-sm-2"}
-            [:i (merge {:class "fa fa-circle" :style {:color color}})]
-            (time-display (quot age-ms 1000))]
-           ])))))
+  (let [now (.now js/Date)]
+    (->>
+      urls
+      (map-indexed
+        (fn [i tab]
+          (let [url     (:url tab)
+                favicon (:icon (get site-data (host-key (hostname url))))
+                title   (:title tab)
+                label   (if (empty? title)
+                          url
+                          title)
+                display (if (< 100 (count label))
+                          (apply str (concat (take 100 label) "..."))
+                          label)
+                age-ms  (- now (:ts tab))
+                ;; Colors picked at http://www.w3schools.com/tags/ref_colorpicker.asp
+                color   (cond
+                          (< age-ms ms-hour) "#00ff00"
+                          (< age-ms ms-day) "#00cc00"
+                          (< age-ms (* 3 ms-day)) "#009900"
+                          (< age-ms (* 7 ms-day)) "#ff8000"
+                          (< age-ms (* 14 ms-day)) "#cc6600"
+                          :else "#994c00"
+                          )
+                ]
+            ^{:key i}
+            [:tr
+             [:td {:class "col-sm-2"}
+              (time-display (:time tab))]
+             [:td {:class "col-sm-8"}
+              [:a
+               {:href url :target "_blank"}
+               (if favicon
+                 [:img {:src    favicon
+                        :width  16
+                        :height 16}])
+               display]]
+             [:td {:class "col-sm-2"}
+              [:i (merge {:class "fa fa-circle" :style {:color color}})]
+              (time-display (quot age-ms 1000))]
+             ]))))))
 
 
 (defn div-urltimes []
