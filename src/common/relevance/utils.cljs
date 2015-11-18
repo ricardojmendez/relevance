@@ -94,7 +94,7 @@
     (into #{})))
 
 (defn time-display
-  "Returns a display string for a number of milliseconds"
+  "Returns a display string for a number of seconds"
   [seconds]
   (letfn [(time-label [major major-label minor minor-label]
             (apply str (concat [major major-label]
@@ -102,7 +102,7 @@
     (cond
       (< seconds 1) "< 1s"
       (< seconds 60) (str seconds "s")
-      (< seconds 3600) (time-label (quot seconds 60) "min" (rem seconds 60) "s")
-      (< seconds 86400) (time-label (quot seconds 3600) "h" (quot (rem seconds 3600) 60) "min")
+      (< seconds 3600) (time-label (quot seconds 60) "m" (rem seconds 60) "s")
+      (< seconds 86400) (time-label (quot seconds 3600) "h" (quot (rem seconds 3600) 60) "m")
       :else (time-label (quot seconds 86400) "d" (quot (rem seconds 86400) 3600) "h")))
   )

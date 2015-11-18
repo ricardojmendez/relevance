@@ -58,7 +58,9 @@
 (register-handler
   :app-state-item
   (fn [app-state [_ path item]]
-    (js/ga "send" "screenview" #js {:screenName (name item)})
+    (when (= [:ui-state :section] path)
+      (js/ga "send" "screenview" #js {:screenName (name item)})
+      )
     (assoc-in app-state path item)))
 
 
@@ -84,7 +86,9 @@
       (dispatch [::storage-changed {:changes {:data {:newValue (:data (<! (storage/get)))}}}]))
     {:app-state {}
      :settings  default-settings
-     :ui-state  {:section :intro}}))
+     :ui-state  {:section   :intro
+                 :url-page  0
+                 :site-page 0}}))
 
 
 (register-handler
@@ -132,7 +136,7 @@
 (def ModalBody (reagent/adapt-react-class js/ReactBootstrap.ModalBody))
 (def ModalFooter (reagent/adapt-react-class js/ReactBootstrap.ModalFooter))
 (def ModalHeader (reagent/adapt-react-class js/ReactBootstrap.ModalHeader))
-
+(def Pagination (reagent/adapt-react-class js/ReactBootstrap.Pagination))
 
 ;;;;----------------------------
 ;;;; Components
@@ -197,55 +201,77 @@
         ]])))
 
 (defn list-urls [urls site-data]
-  (->>
-    urls
-    (map-indexed
-      (fn [i tab]
-        (let [url     (:url tab)
-              favicon (:icon (get site-data (host-key (hostname url))))
-              title   (:title tab)
-              label   (if (empty? title)
-                        url
-                        title)
-              display (if (< 100 (count label))
-                        (apply str (concat (take 100 label) "..."))
-                        label)
-              age-ms  (- (.now js/Date) (:ts tab))
-              ;; Colors picked at http://www.w3schools.com/tags/ref_colorpicker.asp
-              color   (cond
-                        (< age-ms ms-hour) "#00ff00"
-                        (< age-ms ms-day) "#00cc00"
-                        (< age-ms (* 3 ms-day)) "#009900"
-                        (< age-ms (* 7 ms-day)) "#ff8000"
-                        (< age-ms (* 14 ms-day)) "#cc6600"
-                        :else "#994c00"
-                        )
-              ]
-          ^{:key i}
-          [:tr
-           [:td {:class "col-sm-2"}
-            (time-display (:time tab))]
-           [:td {:class "col-sm-8"}
-            [:a
-             {:href url :target "_blank"}
-             (if favicon
-               [:img {:src    favicon
-                      :width  16
-                      :height 16}])
-             display]]
-           [:td {:class "col-sm-2"}
-            [:i (merge {:class "fa fa-circle" :style {:color color}})]
-            (time-display (quot age-ms 1000))]
-           ])))))
+  (let [now (.now js/Date)]
+    (->>
+      urls
+      (map-indexed
+        (fn [i tab]
+          (let [url     (:url tab)
+                favicon (:icon (get site-data (host-key (hostname url))))
+                title   (:title tab)
+                label   (if (empty? title)
+                          url
+                          title)
+                display (if (and (empty? title)
+                                 (< 80 (count label)))
+                          (apply str (concat (take 80 label) "..."))
+                          label)
+                age-ms  (- now (:ts tab))
+                ;; Colors picked at http://www.w3schools.com/tags/ref_colorpicker.asp
+                color   (cond
+                          (< age-ms ms-hour) "#00ff00"
+                          (< age-ms ms-day) "#00cc00"
+                          (< age-ms (* 3 ms-day)) "#009900"
+                          (< age-ms (* 7 ms-day)) "#ff8000"
+                          (< age-ms (* 14 ms-day)) "#cc6600"
+                          :else "#994c00"
+                          )
+                ]
+            ^{:key i}
+            [:tr
+             [:td {:class "col-sm-1"}
+              (time-display (:time tab))]
+             [:td {:class "col-sm-9"}
+              [:a
+               {:href url :target "_blank"}
+               (if favicon
+                 [:img {:src    favicon
+                        :width  16
+                        :height 16}])
+               display]]
+             [:td {:class "col-sm-2"}
+              [:i (merge {:class "fa fa-circle" :style {:color color}})]
+              (time-display (quot age-ms 1000))]
+             ]))))))
 
 
 (defn div-urltimes []
-  (let [url-times  (subscribe [:data :url-times])
-        site-times (subscribe [:data :site-times])
-        url-values (reaction (filter-tabs (vals @url-times)))
-        to-list    (reaction (sort-by #(* -1 (:time %)) @url-values))]
+  (let [url-times   (subscribe [:data :url-times])
+        site-times  (subscribe [:data :site-times])
+        url-values  (reaction (filter-tabs (vals @url-times)))
+        to-list     (reaction (sort-by #(* -1 (:time %)) @url-values))
+        total       (reaction (count @to-list))
+        per-page    200
+        chosen-page (subscribe [:ui-state :url-page])
+        num-pages   (reaction (.ceil js/Math (/ @total per-page)))
+        current     (reaction (.min js/Math (.max js/Math @chosen-page 0) @num-pages))
+        list-shown  (reaction (->> @to-list
+                                   (drop (* @current per-page))
+                                   (take per-page)))]
     (fn []
       [:div {:class "row"}
+       [:p "Total: " @total " URLs."]
+       (when (< per-page @total)
+         [Pagination
+          {:bsSize     "medium"
+           :items      @num-pages
+           :activePage (inc @current)
+           :first      true
+           :last       true
+           :ellipsis   true
+           :maxButtons 20
+           :onSelect   #(dispatch [:app-state-item [:ui-state :url-page] (dec (aget %2 "eventKey"))])}
+          ])
        [:div {:class "card"}
         [:div {:class "content table-responsive table-full-width"}
          [:table {:class "table table-striped table-hover"}
@@ -255,7 +281,7 @@
             [:th "Title"]
             [:th "Last visit"]]]
           [:tbody
-           (list-urls @to-list @site-times)
+           (list-urls @list-shown @site-times)
            ]]]]
        ])
     ))
@@ -263,9 +289,11 @@
 (defn div-sitetimes []
   (let [site-times (subscribe [:data :site-times])
         sites      (reaction (vals @site-times))
-        to-list    (reaction (sort-by #(* -1 (:time %)) @sites))]
+        to-list    (reaction (sort-by #(* -1 (:time %)) @sites))
+        total      (reaction (count @to-list))]
     (fn []
       [:div {:class "row"}
+       [:p "Total: " @total " domains."]
        [:div {:class "card"}
         [:div {:class "content table-responsive table-full-width"}
          [:table {:class "table table-striped table-hover"}
