@@ -226,7 +226,7 @@
             [:tr
              [:td {:class "col-sm-2"}
               (time-display (:time tab))]
-             [:td {:class "col-sm-8"}
+             [:td {:class "col-sm-7"}
               [:a
                {:href url :target "_blank"}
                (if favicon
@@ -234,7 +234,7 @@
                         :width  16
                         :height 16}])
                display]]
-             [:td {:class "col-sm-2"}
+             [:td {:class "col-sm-3"}
               [:i (merge {:class "fa fa-circle" :style {:color color}})]
               (time-display (quot age-ms 1000))]
              ]))))))
