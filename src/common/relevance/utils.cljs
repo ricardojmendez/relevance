@@ -87,7 +87,7 @@
   "Split a string into a string set using commas, semi-colons or new lines, and returns it as a set"
   [s]
   (->>
-    (string/split (or s "") #",|\n|;")
+    (string/split (or s "") #",|\n|;| ")
     (map string/trim)
     (remove empty?)
     (map string/lower-case)
@@ -104,6 +104,5 @@
       (< seconds 60) (str seconds "s")
       (< seconds 3600) (time-label (quot seconds 60) "min" (rem seconds 60) "s")
       (< seconds 86400) (time-label (quot seconds 3600) "h" (quot (rem seconds 3600) 60) "min")
-      :else (time-label (quot seconds 86400) "d" (quot (rem seconds 86400) 3600) "h"))
-    )
+      :else (time-label (quot seconds 86400) "d" (quot (rem seconds 86400) 3600) "h")))
   )

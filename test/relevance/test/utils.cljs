@@ -131,5 +131,6 @@
                   "alpha\nbeta " #{"alpha" "beta"}
                   "a\nbeta,c" #{"a" "beta" "c"}
                   "a\nbeta,C;d;" #{"a" "beta" "c" "d"}
+                  "a b,c" #{"a" "b" "c"}
                   "a,b,,c,;d;e;; f,e\n\n" #{"a" "b" "c" "d" "e" "f"}
                   ))

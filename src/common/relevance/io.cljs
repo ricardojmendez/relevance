@@ -10,19 +10,21 @@
 
 (defn save-raw
   "Saves the data raw, without converting it to transit first."
-  [data callback]
-  (storage/set {:data data} storage/local callback))
+  [id data callback]
+  (storage/set {id data} storage/local callback))
 
 (defn save
   "Saves our data on the extension's storage after converting it to transit."
-  [data]
-  (save-raw (to-transit data) nil))
+  ([id data]
+   (save id data nil))
+  ([id data callback]
+   (save-raw id (to-transit data) callback)))
 
 
 (defn load
   "Returns a channel where we'll put the entire data block read from the
   extension's storage"
-  []
+  [id]
   (go
-    (let [raw (:data (<! (storage/get)))]
+    (let [raw (id (<! (storage/get)))]
       (from-transit raw))))

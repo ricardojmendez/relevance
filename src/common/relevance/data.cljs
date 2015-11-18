@@ -1,5 +1,6 @@
 (ns relevance.data
-  (:require [relevance.utils :refer [url-key host-key hostname]]))
+  (:require [relevance.utils :refer [url-key host-key hostname]]
+            [khroma.log :as console]))
 
 
 (defn accumulate-site-times

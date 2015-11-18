@@ -4,13 +4,17 @@
             [cljs.core.async :refer [>! <!]]
             [cljs.core :refer [random-uuid]]
             [cljsjs.react-bootstrap]
+            [clojure.string :as string]
             [khroma.idle :as idle]
             [khroma.log :as console]
             [khroma.runtime :as runtime]
             [khroma.storage :as storage]
             [reagent.core :as reagent]
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
-            [relevance.io :as io])
+            [relevance.io :as io]
+            [relevance.utils :as utils]
+            [relevance.settings :refer [default-settings]]
+            )
   (:require-macros [cljs.core :refer [goog-define]]
                    [cljs.core.async.macros :refer [go go-loop]]
                    [reagent.ratom :refer [reaction]]))
@@ -26,6 +30,7 @@
 
 ;; Application data, will be saved
 (register-sub :data general-query)
+(register-sub :settings general-query)
 (register-sub :raw-data general-query)
 ;; Transient data items
 (register-sub :ui-state general-query)
@@ -62,7 +67,7 @@
   (fn [app-state [_ transit-data]]
     ;; We actually just need to save it, since ::storage-changed takes care
     ;; of loading it and importing it.
-    (io/save-raw transit-data #(runtime/send-message :reload-data))
+    (io/save-raw :data transit-data #(runtime/send-message :reload-data))
     (-> app-state
         (assoc-in [:ui-state :section] :url-times)
         (assoc-in [:app-state :import] nil))
@@ -72,9 +77,13 @@
 (register-handler
   ::initialize
   (fn [_]
-    ;; Fake a ::storage-changed message to load the data from storage
-    (go (dispatch [::storage-changed {:changes {:data {:newValue (:data (<! (storage/get)))}}}]))
+    (go
+      (dispatch [:settings-set (or (<! (io/load :settings))
+                                   default-settings)])
+      ;; Fake a ::storage-changed message to load the data from storage
+      (dispatch [::storage-changed {:changes {:data {:newValue (:data (<! (storage/get)))}}}]))
     {:app-state {}
+     :settings  default-settings
      :ui-state  {:section :intro}}))
 
 
@@ -83,6 +92,23 @@
   (fn [app-state [_ info]]
     (assoc-in app-state [:ui-state :modal-info] info)))
 
+(register-handler
+  :settings-parse
+  (fn [app-state [_ settings]]
+    (let [ignore-set (utils/to-string-set (:ignore-set settings))]
+      (dispatch [:settings-set {:ignore-set ignore-set} true])
+      app-state)
+    ))
+
+(register-handler
+  :settings-set
+  (fn [app-state [_ settings save?]]
+    ; (console/log "Saving" settings save?)
+    (when save?
+      ;; We tell the backend to reload the data after saving the settings, since
+      ;; they can have an effect on behavior.
+      (io/save :settings settings #(runtime/send-message :reload-data)))
+    (assoc app-state :settings settings)))
 
 (register-handler
   ::storage-changed
@@ -126,6 +152,7 @@
        (nav-left-item "Introduction" "pe-7s-home" :intro @section)
        (nav-left-item "Page times" "pe-7s-note2" :url-times @section)
        (nav-left-item "Site times" "pe-7s-note2" :site-times @section)
+       (nav-left-item "Settings" "pe-7s-config" :settings @section)
        (nav-left-item "Export data" "pe-7s-box1" :export @section)
        (nav-left-item "Import data" "pe-7s-attention" :import @section)]))
   )
@@ -140,6 +167,7 @@
           :url-times "Time reading a page"
           :site-times "Time visiting a site"
           :export "Export your Relevance data"
+          :settings "Settings"
           :import "Import a Relevance backup"
           "")
         ]])))
@@ -190,7 +218,7 @@
                         (< age-ms (* 14 ms-day)) "#cc6600"
                         :else "#994c00"
                         )
-                      ]
+              ]
           ^{:key i}
           [:tr
            [:td {:class "col-sm-2"}
@@ -320,6 +348,7 @@
         ]
        ])))
 
+
 (defn data-import []
   (let [import-data (reagent/atom "")]
     (fn []
@@ -332,14 +361,39 @@
                    :rows      30
                    :value     @import-data
                    :on-change #(reset! import-data (-> % .-target .-value))}]
-       [:a {:class    "btn btn-danger btn-sm"
+       [:a {:class    "btn btn-primary btn-sm"
             :on-click #(dispatch [:data-import @import-data])} "Import"]
+       ])))
+
+(defn div-settings []
+  (let [ignore-set (subscribe [:settings :ignore-set])
+        our-ignore (reagent/atom (string/join "\n" (sort @ignore-set)))
+        ]
+    (fn []
+      [:div {:class "col-sm-12"}
+       [:div {:class "row"}
+        [:div {:class "col-sm-6"}
+         [:h3 "Ignore domains"]
+         [:p "Type on the left domains that you want ignore, one per line."]
+         [:p {:class "alert alert-info"} [:strong "Heads up! "] "Adding a domain to the ignore list will remove the data Relevance currently has for it."]
+         ]
+        [:div {:class "col-sm-6"}
+         [:textarea {:class     "form-control"
+                     :value     @our-ignore
+                     :rows      10
+                     :on-change #(reset! our-ignore (-> % .-target .-value))}
+          ]]
+        ]
+       [:div {:class "row"}
+        [:a {:class    "btn btn-danger btn-sm"
+             :on-click #(dispatch [:settings-parse {:ignore-set @our-ignore}])} "Save settings"]]
        ])))
 
 
 (def component-dir {:export     data-export
                     :import     data-import
                     :intro      div-intro
+                    :settings   div-settings
                     :url-times  div-urltimes
                     :site-times div-sitetimes})
 
