@@ -107,7 +107,9 @@
     (when save?
       ;; We tell the backend to reload the data after saving the settings, since
       ;; they can have an effect on behavior.
-      (io/save :settings settings #(runtime/send-message :reload-data)))
+      (io/save :settings settings #(runtime/send-message :reload-data))
+      (dispatch [:app-state-item [:ui-state :section] :url-times])
+      )
     (assoc app-state :settings settings)))
 
 (register-handler
