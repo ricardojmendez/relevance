@@ -87,6 +87,7 @@
                   "chrome://extensions/?id=okhigbflgnbihoiokilagelkalkcigfp" "extensions"
                   "chrome-extension://okhigbflgnbihoiokilagelkalkcigfp/index.html" "okhigbflgnbihoiokilagelkalkcigfp"
                   "file:///Users/ricardo/Sources/user.html" ""
+                  "view-source:http://localhost:4000/opensource/" ""
                   "" ""
                   nil nil
                   ))
@@ -115,7 +116,20 @@
                     "http://localhost" true
                     "https://numergent.com/" true
                     "chrome://extensions/?id=okhigbflgnbihoiokilagelkalkcigfp" false
+                    "view-source:http://localhost:4000/opensource/" false
                     "http" false
                     "" false
                     nil false
                     ))
+
+
+(deftest test-to-string-set
+  (are [s result] (= result (utils/to-string-set s))
+                  "alpha" #{"alpha"}
+                  "alpha\nbeta" #{"alpha" "beta"}
+                  "ALPHA\nBETA" #{"alpha" "beta"}
+                  "alpha\nbeta " #{"alpha" "beta"}
+                  "a\nbeta,c" #{"a" "beta" "c"}
+                  "a\nbeta,C;d;" #{"a" "beta" "c" "d"}
+                  "a,b,,c,;d;e;; f,e\n\n" #{"a" "b" "c" "d" "e" "f"}
+                  ))
