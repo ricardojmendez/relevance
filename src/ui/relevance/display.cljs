@@ -4,13 +4,17 @@
             [cljs.core.async :refer [>! <!]]
             [cljs.core :refer [random-uuid]]
             [cljsjs.react-bootstrap]
+            [clojure.string :as string]
             [khroma.idle :as idle]
             [khroma.log :as console]
             [khroma.runtime :as runtime]
             [khroma.storage :as storage]
             [reagent.core :as reagent]
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
-            [relevance.io :as io])
+            [relevance.io :as io]
+            [relevance.utils :as utils]
+            [relevance.settings :refer [default-settings]]
+            )
   (:require-macros [cljs.core :refer [goog-define]]
                    [cljs.core.async.macros :refer [go go-loop]]
                    [reagent.ratom :refer [reaction]]))
@@ -26,6 +30,7 @@
 
 ;; Application data, will be saved
 (register-sub :data general-query)
+(register-sub :settings general-query)
 (register-sub :raw-data general-query)
 ;; Transient data items
 (register-sub :ui-state general-query)
@@ -46,11 +51,6 @@
   [tabs]
   (remove #(.startsWith (:url %) "chrome") tabs))
 
-
-;; Tab items we actually care about
-(def relevant-tab-items [:index :url :title :icon])
-
-
 ;;;;----------------------------
 ;;;; Handlers
 ;;;;----------------------------
@@ -58,7 +58,8 @@
 (register-handler
   :app-state-item
   (fn [app-state [_ path item]]
-    (js/ga "send" "screenview" #js {:screenName (name item)})
+    (when (= [:ui-state :section] path)
+      #_(js/ga "send" "screenview" #js {:screenName (name item)}))
     (assoc-in app-state path item)))
 
 
@@ -67,7 +68,7 @@
   (fn [app-state [_ transit-data]]
     ;; We actually just need to save it, since ::storage-changed takes care
     ;; of loading it and importing it.
-    (io/save-raw transit-data #(runtime/send-message :reload-data))
+    (io/save-raw :data transit-data #(runtime/send-message {:action :reload-data}))
     (-> app-state
         (assoc-in [:ui-state :section] :url-times)
         (assoc-in [:app-state :import] nil))
@@ -77,10 +78,16 @@
 (register-handler
   ::initialize
   (fn [_]
-    ;; Fake a ::storage-changed message to load the data from storage
-    (go (dispatch [::storage-changed {:changes {:data {:newValue (:data (<! (storage/get)))}}}]))
+    (go
+      (dispatch [:settings-set (or (<! (io/load :settings))
+                                   default-settings)])
+      ;; Fake a ::storage-changed message to load the data from storage
+      (dispatch [::storage-changed {:changes {:data {:newValue (:data (<! (storage/get)))}}}]))
     {:app-state {}
-     :ui-state  {:section :intro}}))
+     :settings  default-settings
+     :ui-state  {:section   :intro
+                 :url-page  0
+                 :site-page 0}}))
 
 
 (register-handler
@@ -88,6 +95,25 @@
   (fn [app-state [_ info]]
     (assoc-in app-state [:ui-state :modal-info] info)))
 
+(register-handler
+  :settings-parse
+  (fn [app-state [_ settings]]
+    (let [ignore-set (utils/to-string-set (:ignore-set settings))]
+      (dispatch [:settings-set {:ignore-set ignore-set} true])
+      app-state)
+    ))
+
+(register-handler
+  :settings-set
+  (fn [app-state [_ settings save?]]
+    ; (console/log "Saving" settings save?)
+    (when save?
+      ;; We tell the backend to reload the data after saving the settings, since
+      ;; they can have an effect on behavior.
+      (io/save :settings settings #(runtime/send-message {:action :reload-data}))
+      (dispatch [:app-state-item [:ui-state :section] :url-times])
+      )
+    (assoc app-state :settings settings)))
 
 (register-handler
   ::storage-changed
@@ -109,17 +135,12 @@
 (def ModalBody (reagent/adapt-react-class js/ReactBootstrap.ModalBody))
 (def ModalFooter (reagent/adapt-react-class js/ReactBootstrap.ModalFooter))
 (def ModalHeader (reagent/adapt-react-class js/ReactBootstrap.ModalHeader))
-
+(def Pagination (reagent/adapt-react-class js/ReactBootstrap.Pagination))
 
 ;;;;----------------------------
 ;;;; Components
 ;;;;----------------------------
 
-
-(defn navbar-item [label section current]
-  [:li {:class (when (= section current) "active")}
-   [:a {:on-click #(dispatch [:app-state-item [:ui-state :section] section])} label
-    (when (= section current) [:span {:class "sr-only"} "(current)"])]])
 
 (defn nav-left-item [label class section current]
   [:li {:class (when (= section current) "active")}
@@ -136,6 +157,7 @@
        (nav-left-item "Introduction" "pe-7s-home" :intro @section)
        (nav-left-item "Page times" "pe-7s-note2" :url-times @section)
        (nav-left-item "Site times" "pe-7s-note2" :site-times @section)
+       (nav-left-item "Settings" "pe-7s-config" :settings @section)
        (nav-left-item "Export data" "pe-7s-box1" :export @section)
        (nav-left-item "Import data" "pe-7s-attention" :import @section)]))
   )
@@ -150,6 +172,7 @@
           :url-times "Time reading a page"
           :site-times "Time visiting a site"
           :export "Export your Relevance data"
+          :settings "Settings"
           :import "Import a Relevance backup"
           "")
         ]])))
@@ -177,55 +200,82 @@
         ]])))
 
 (defn list-urls [urls site-data]
-  (->>
-    urls
-    (map-indexed
-      (fn [i tab]
-        (let [url     (:url tab)
-              favicon (:icon (get site-data (host-key (hostname url))))
-              title   (:title tab)
-              label   (if (empty? title)
-                        url
-                        title)
-              display (if (< 100 (count label))
-                        (apply str (concat (take 100 label) "..."))
-                        label)
-              age-ms  (- (.now js/Date) (:ts tab))
-              ;; Colors picked at http://www.w3schools.com/tags/ref_colorpicker.asp
-              color   (cond
-                        (< age-ms ms-hour) "#00ff00"
-                        (< age-ms ms-day) "#00cc00"
-                        (< age-ms (* 3 ms-day)) "#009900"
-                        (< age-ms (* 7 ms-day)) "#ff8000"
-                        (< age-ms (* 14 ms-day)) "#cc6600"
-                        :else "#994c00"
-                        )
-                      ]
-          ^{:key i}
-          [:tr
-           [:td {:class "col-sm-2"}
-            (time-display (:time tab))]
-           [:td {:class "col-sm-8"}
-            [:a
-             {:href url :target "_blank"}
-             (if favicon
-               [:img {:src    favicon
-                      :width  16
-                      :height 16}])
-             display]]
-           [:td {:class "col-sm-2"}
-            [:i (merge {:class "fa fa-circle" :style {:color color}})]
-            (time-display (quot age-ms 1000))]
-           ])))))
+  (let [now (.now js/Date)]
+    (->>
+      urls
+      (map-indexed
+        (fn [i tab]
+          (let [url     (:url tab)
+                favicon (:icon (get site-data (host-key (hostname url))))
+                title   (:title tab)
+                label   (if (empty? title)
+                          url
+                          title)
+                display (if (and (= url label)
+                                 (< 80 (count label)))
+                          (apply str (concat (take 80 label) "..."))
+                          label)
+                age-ms  (- now (:ts tab))
+                ;; Colors picked at http://www.w3schools.com/tags/ref_colorpicker.asp
+                color   (cond
+                          (< age-ms ms-hour) "#00ff00"
+                          (< age-ms ms-day) "#00cc00"
+                          (< age-ms (* 3 ms-day)) "#009900"
+                          (< age-ms (* 7 ms-day)) "#ff8000"
+                          (< age-ms (* 14 ms-day)) "#cc6600"
+                          :else "#994c00"
+                          )
+                ]
+            ^{:key i}
+            [:tr {:class "has_on_hover"}
+             [:td {:class "col-sm-1"}
+              (time-display (:time tab))]
+             [:td {:class "col-sm-9"}
+              [:a
+               {:href url :target "_blank"}
+               (if favicon
+                 [:img {:src    favicon
+                        :width  16
+                        :height 16}])
+               display]]
+             [:td {:class "col-sm-2"}
+              [:i {:class "fa fa-circle" :style {:color color}}]
+              (time-display (quot age-ms 1000))
+              [:span {:class "show_on_hover" :style {:text-align "right"}}
+               [:i {:class "fa fa-remove"
+                    :style {:color "red"}
+                    :on-click #(runtime/send-message {:action :delete-url
+                                                      :data url})}]]]
+             ]))))))
 
 
 (defn div-urltimes []
-  (let [url-times  (subscribe [:data :url-times])
-        site-times (subscribe [:data :site-times])
-        url-values (reaction (filter-tabs (vals @url-times)))
-        to-list    (reaction (sort-by #(* -1 (:time %)) @url-values))]
+  (let [url-times   (subscribe [:data :url-times])
+        site-times  (subscribe [:data :site-times])
+        url-values  (reaction (filter-tabs (vals @url-times)))
+        to-list     (reaction (sort-by #(* -1 (:time %)) @url-values))
+        total       (reaction (count @to-list))
+        per-page    200
+        chosen-page (subscribe [:ui-state :url-page])
+        num-pages   (reaction (.ceil js/Math (/ @total per-page)))
+        current     (reaction (.min js/Math (.max js/Math @chosen-page 0) @num-pages))
+        list-shown  (reaction (->> @to-list
+                                   (drop (* @current per-page))
+                                   (take per-page)))]
     (fn []
       [:div {:class "row"}
+       [:p "Total: " @total " URLs."]
+       (when (< per-page @total)
+         [Pagination
+          {:bsSize     "medium"
+           :items      @num-pages
+           :activePage (inc @current)
+           :first      true
+           :last       true
+           :ellipsis   true
+           :maxButtons 20
+           :onSelect   #(dispatch [:app-state-item [:ui-state :url-page] (dec (aget %2 "eventKey"))])}
+          ])
        [:div {:class "card"}
         [:div {:class "content table-responsive table-full-width"}
          [:table {:class "table table-striped table-hover"}
@@ -235,7 +285,7 @@
             [:th "Title"]
             [:th "Last visit"]]]
           [:tbody
-           (list-urls @to-list @site-times)
+           (list-urls @list-shown @site-times)
            ]]]]
        ])
     ))
@@ -243,9 +293,11 @@
 (defn div-sitetimes []
   (let [site-times (subscribe [:data :site-times])
         sites      (reaction (vals @site-times))
-        to-list    (reaction (sort-by #(* -1 (:time %)) @sites))]
+        to-list    (reaction (sort-by #(* -1 (:time %)) @sites))
+        total      (reaction (count @to-list))]
     (fn []
       [:div {:class "row"}
+       [:p "Total: " @total " domains."]
        [:div {:class "card"}
         [:div {:class "content table-responsive table-full-width"}
          [:table {:class "table table-striped table-hover"}
@@ -286,8 +338,18 @@
     [:p "I wrote Relevance to help manage that. I've found it very useful in organizing what I should be focusing on, and I hope it'l be useful for you as well."]
     ]
    [:div {:class "col-sm-10 col-sm-offset-1"}
-    [:h2 "Preview software"]
-    [:p "Relevance is a software preview, and I'll be happy to hear your comments. If you have any suggestions on what you think might make Relevance better, "
+    [:h2 "Adaptive arrangements"]
+    [:p
+     "Relevance will periodically clean up sites that you haven't spent a long time at, or that you don't visit that often."
+     "This means you can always rely on the order to be based on fresh data from your recent behavior."]
+    [:p
+     "If you want to fine-tune which sites Relevance prioritizes, you can go to the "
+     [:i "Settings"]
+     " page and add domains that Relevance should ignore when recording your habits."]
+    ]
+   [:div {:class "col-sm-10 col-sm-offset-1"}
+    [:h2 "Notes and comments"]
+    [:p "I'm actively developing Relevance, and I'll be happy to hear your comments. If you have any suggestions on what you think might make Relevance better, "
      [:a {:href "https://twitter.com/intent/tweet?text=Hey%20@argesric%20about%20&hashtags=relevance" :target "_blank"}
       "please reach out on Twitter"]
      " or "
@@ -330,6 +392,7 @@
         ]
        ])))
 
+
 (defn data-import []
   (let [import-data (reagent/atom "")]
     (fn []
@@ -337,19 +400,51 @@
        [:div {:class "page-header"} [:h2 "Import data"]]
        [:div {:class "alert alert-warning"}
         [:h4 "Warning!"]
-        [:p "Your entire data will be replaced with the information below."]]
-       [:textarea {:class     "form-control"
-                   :rows      30
-                   :value     @import-data
-                   :on-change #(reset! import-data (-> % .-target .-value))}]
-       [:a {:class    "btn btn-danger btn-sm"
-            :on-click #(dispatch [:data-import @import-data])} "Import"]
+        [:p "Your reading statistics be replaced with the information you enter below."]]
+       [:div {:class "row"}
+        [:textarea {:class     "form-control"
+                    :rows      30
+                    :value     @import-data
+                    :on-change #(reset! import-data (-> % .-target .-value))}]
+        ]
+
+       [:div {:class "row"}
+        [:a {:class    "btn btn-primary btn-sm"
+             :on-click #(dispatch [:data-import @import-data])} "Import"]
+        ]
+       ])))
+
+(defn div-settings []
+  (let [ignore-set (subscribe [:settings :ignore-set])
+        our-ignore (reagent/atom (string/join "\n" (sort @ignore-set)))
+        ]
+    (fn []
+      [:div {:class "col-sm-12"}
+       [:div {:class "row"}
+        [:div {:class "col-sm-6"}
+         [:h3 "Ignore domains"]
+         [:p "Type on the left domains that you want ignore, one per line."]
+         [:p {:class "alert alert-info"} [:strong "Heads up! "] "Adding a domain to the ignore list will remove the data Relevance currently has for it."]
+         ]
+        [:div {:class "col-sm-6"}
+         [:textarea {:class     "form-control"
+                     :value     @our-ignore
+                     :rows      10
+                     :on-change #(reset! our-ignore (-> % .-target .-value))}
+          ]]
+        ]
+       [:div {:class "row"}
+        [:div {:class "col-sm-12"}
+         [:a {:class    "btn btn-danger btn-sm"
+              :on-click #(dispatch [:settings-parse {:ignore-set @our-ignore}])} "Save settings"]]
+        ]
        ])))
 
 
 (def component-dir {:export     data-export
                     :import     data-import
                     :intro      div-intro
+                    :settings   div-settings
                     :url-times  div-urltimes
                     :site-times div-sitetimes})
 

@@ -185,6 +185,26 @@
           result (data/track-url-time (:url-times test-db) tab 9 ts)]
       (is (= result (:url-times test-db)))
       ))
+  (testing "Attempting to add time to an ignored URL causes no changes"
+    ;; Repeating almost the exact same test as when we tracked the time for
+    ;; Numergent, only passing it as an ignore domain now.
+    (let [tab         {:url        "http://numergent.com/"
+                       :title      "Numergent limited"
+                       :favIconUrl "http://numergent.com/favicon.png"}
+          ts          1445964037799
+          with-ignore (data/track-url-time (:url-times test-db) tab 9 ts
+                                           :ignore-set #{"localhost" "somedomain.com" "numergent.com"})
+          no-ignore   (data/track-url-time (:url-times test-db) tab 9 ts
+                                           :ignore-set #{"localhost" "somedomain.com"})
+          tab-key     (utils/url-key "http://numergent.com/")
+          item        (get with-ignore tab-key)]
+      (is with-ignore)
+      (is (nil? item))
+      (is (= with-ignore (:url-times test-db)) "URL times should not have been altered")
+      (is (not= with-ignore no-ignore) "Removing the domain from the ignore list should result on the element being added")
+      (is (= (count no-ignore) (inc (count with-ignore))) "Result without ignoring the element should have one more value")
+      )
+    )
   )
 
 
@@ -207,7 +227,11 @@
                              (:favIconUrl tab) (:icon item)
                              "numergent.com" (:host item)
                              ts (:ts item)
-                             1234 (:time item)))
+                             1234 (:time item))
+      ;; Let's make sure we did not break anything while adding an ignore parameter
+      (is (= result (data/track-site-time {} tab 1234 ts :ignore-set #{"localhost" "newtab"}))
+          "The result should be the same even if we pass an ignore-set")
+      )
     )
   (testing "Add time to an existing database for an existing site"
     (let [tab    {:url        "http://numergent.com/opensource/index.html"
@@ -230,7 +254,12 @@
                              147 (:time item))
       (doseq [other (dissoc result id)]
         (is (= (val other) (get (:site-times test-db) (key other))) "Other items should have remained untouched")
-        )))
+        )
+      ;; Let's make sure we did not break anything while adding an ignore parameter
+      (is (= result (data/track-site-time (:site-times test-db) tab 3 ts
+                                          :ignore-set #{"localhost" "newtab"}))
+          "The result should be the same even if we pass an ignore-set")
+      ))
   (testing "Add time to an existing database for a new site"
     (let [tab    {:url        "https://twitter.com/ArgesRic"
                   :title      "ArgesRic"
@@ -252,7 +281,13 @@
                              9 (:time item))
       (doseq [other (dissoc result id)]
         (is (= (val other) (get (:site-times test-db) (key other))) "Other items should have remained untouched")
-        ))
+        )
+      ;; Then, let's make sure we did not break anything while adding an ignore parameter
+      (is (= result
+             (data/track-site-time (:site-times test-db) tab 9 ts
+                                   :ignore-set #{"localhost" "somedomain.com"})))
+      )
+
     )
   (testing "Add zero time should not result on any changes"
     (let [tab    {:url        "https://twitter.com/ArgesRic"
@@ -278,13 +313,35 @@
                                        ts)]
       (is result)
       (is (= result (:site-times test-db)))))
+  (testing "Add time to an ignored site does not change the database"
+    ;; Repeating almost the exact same test as when we tracked the time for
+    ;; Numergent, only passing it as an ignore domain now.
+    (let [tab         {:url        "http://numergent.com/opensource/index.html"
+                       :title      "Further open source project details"
+                       :favIconUrl "http://numergent.com/newfavicon.png"}
+          ts          1445964037900
+          with-ignore (data/track-site-time (:site-times test-db) tab 3 ts
+                                            :ignore-set #{"localhost" "somedomain.com" "numergent.com"})
+          no-ignore   (data/track-site-time (:site-times test-db) tab 3 ts
+                                            :ignore-set #{"localhost" "somedomain.com"})
+          id          (utils/host-key (utils/hostname "http://numergent.com/opensource/"))
+          item        (get no-ignore id)]
+      (is with-ignore)
+      (is (= with-ignore (:site-times test-db)))
+      (is (not= with-ignore no-ignore))
+      ;; Then let's verify the values on the one we actually added
+      (are [expected result] (= expected result)
+                             (:favIconUrl tab) (:icon item)
+                             "numergent.com" (:host item)
+                             ts (:ts item)
+                             147 (:time item))))
   )
 
 
-(deftest test-time-clean-up
+(deftest test-clean-up-by-time
   (testing "Clean up date and minimum time are respected"
     (let [min-date 1446028215913
-          pruned   (data/time-clean-up (:url-times test-db) min-date 30)]
+          pruned   (data/clean-up-by-time (:url-times test-db) min-date 30)]
       (is pruned)
       (is (= 5 (count pruned)))
       ;; We removed the right elements
@@ -295,7 +352,7 @@
       ))
   (testing "Timestamp filtering is only on strictly greater than"
     (let [min-date 1446114615912
-          pruned   (data/time-clean-up (:url-times test-db) min-date 30)]
+          pruned   (data/clean-up-by-time (:url-times test-db) min-date 30)]
       (is pruned)
       (is (= 3 (count pruned)))
       ;; getprismatic is still there
@@ -306,7 +363,7 @@
       ))
   (testing "Cut-off seconds are respected when filtering"
     (let [min-date 1446114615912
-          pruned   (data/time-clean-up (:url-times test-db) min-date 28)]
+          pruned   (data/clean-up-by-time (:url-times test-db) min-date 28)]
       (is pruned)
       (is (= 4 (count pruned)))
       ;; getprismatic is still there
@@ -314,12 +371,33 @@
       ;; ... and we didn' lose splunk
       (is (get pruned (utils/url-key "http://splunk.com/"))))
     (let [min-date 1446114615913
-          pruned   (data/time-clean-up (:url-times test-db) min-date 50)]
+          pruned   (data/clean-up-by-time (:url-times test-db) min-date 50)]
       (is pruned)
       (is (= 2 (count pruned)))
       (is (= #{-327774960 -327358142}
              (into #{} (keys pruned)))))
     ))
+
+(deftest test-clean-up-ignored
+  (let [url-times (:url-times test-db)]
+    (is (= url-times
+           (data/clean-up-ignored url-times #{}))
+        "Passing an empty set should not change things")
+    (is (= url-times
+           (data/clean-up-ignored url-times #{"localhost" "somedomain.com"}))
+        "Passing a set of not-matching domain does not change things")
+    ;; Test removing a domain
+    (let [result (data/clean-up-ignored url-times #{"localhost" "numergent.com"})]
+      (is (= result (dissoc url-times -327774960 -526558523))
+          "We should have removed the numergent-associated urls")
+      (is (= 5 (count result))))
+    ;; Test removing multiple domains
+    (let [result (data/clean-up-ignored url-times #{"localhost" "getprismatic.com" "numergent.com"})]
+      (is (= result (dissoc url-times -327774960 -526558523 1609181525))
+          "We should have removed the numergent-associated urls")
+      (is (= 4 (count result))))
+    ))
+
 
 (deftest test-accumulate-site-times
   (testing "Accumulate site times creates a total but doesn't add favicons"
@@ -362,7 +440,7 @@
 (deftest test-accumulate-after-clean-up
   (testing "We get a value accumulation per site time after clean up"
     (let [min-date   1446114615912
-          pruned     (data/time-clean-up (:url-times test-db) min-date 30)
+          pruned     (data/clean-up-by-time (:url-times test-db) min-date 30)
           site-times (data/accumulate-site-times pruned)]
       (is pruned)
       (is (= {971841386  {:icon nil

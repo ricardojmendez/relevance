@@ -59,16 +59,16 @@
                     1 "1s"
                     3 "3s"
                     49 "49s"
-                    60 "1min"
-                    61 "1min 1s"
-                    119 "1min 59s"
-                    120 "2min"
-                    124 "2min 4s"
-                    762 "12min 42s"
+                    60 "1m"
+                    61 "1m 1s"
+                    119 "1m 59s"
+                    120 "2m"
+                    124 "2m 4s"
+                    762 "12m 42s"
                     3600 "1h"
                     3610 "1h"
-                    3660 "1h 1min"
-                    8659 "2h 24min"
+                    3660 "1h 1m"
+                    8659 "2h 24m"
                     86592 "1d"
                     124076 "1d 10h"
                     248996 "2d 21h"
@@ -87,6 +87,7 @@
                   "chrome://extensions/?id=okhigbflgnbihoiokilagelkalkcigfp" "extensions"
                   "chrome-extension://okhigbflgnbihoiokilagelkalkcigfp/index.html" "okhigbflgnbihoiokilagelkalkcigfp"
                   "file:///Users/ricardo/Sources/user.html" ""
+                  "view-source:http://localhost:4000/opensource/" ""
                   "" ""
                   nil nil
                   ))
@@ -115,7 +116,21 @@
                     "http://localhost" true
                     "https://numergent.com/" true
                     "chrome://extensions/?id=okhigbflgnbihoiokilagelkalkcigfp" false
+                    "view-source:http://localhost:4000/opensource/" false
                     "http" false
                     "" false
                     nil false
                     ))
+
+
+(deftest test-to-string-set
+  (are [s result] (= result (utils/to-string-set s))
+                  "alpha" #{"alpha"}
+                  "alpha\nbeta" #{"alpha" "beta"}
+                  "ALPHA\nBETA" #{"alpha" "beta"}
+                  "alpha\nbeta " #{"alpha" "beta"}
+                  "a\nbeta,c" #{"a" "beta" "c"}
+                  "a\nbeta,C;d;" #{"a" "beta" "c" "d"}
+                  "a b,c" #{"a" "b" "c"}
+                  "a,b,,c,;d;e;; f,e\n\n" #{"a" "b" "c" "d" "e" "f"}
+                  ))

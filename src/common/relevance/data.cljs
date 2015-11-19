@@ -1,5 +1,6 @@
 (ns relevance.data
-  (:require [relevance.utils :refer [url-key host-key hostname]]))
+  (:require [relevance.utils :refer [url-key host-key hostname]]
+            [khroma.log :as console]))
 
 
 (defn accumulate-site-times
@@ -18,7 +19,7 @@
   )
 
 
-(defn time-clean-up
+(defn clean-up-by-time
   "Removes from url-times all the items that are older than cut-off-ts
   and which were viewed for less than min-seconds"
   [url-times cut-off-ts min-seconds]
@@ -27,11 +28,19 @@
                          (< (:time (val %)) min-seconds))
                    url-times)))
 
+(defn clean-up-ignored
+  "Removes from url-times all the items for which the domain
+  matches an ignore set"
+  [url-times ignore-set]
+  (into {} (remove #(contains? ignore-set (hostname (:url (val %))))
+                   url-times))
+  )
+
 (defn track-url-time
   "Receives a url time database, a tab record and a time to track, and returns
   new time database which is the result of adding the time to the URL. It also
   timestamps the record with the timestamp received."
-  [url-times tab time timestamp]
+  [url-times tab time timestamp & {:keys [ignore-set]}]
   (let [url      (or (:url tab) "")
         id       (url-key url)
         url-item (or (get url-times id)
@@ -39,6 +48,7 @@
                       :time 0
                       :ts   0})
         track?   (and (not= 0 id)
+                      (not (contains? ignore-set (hostname url)))
                       (< 0 time))
         new-item (assoc url-item :time (+ (:time url-item) time)
                                  :title (:title tab)
@@ -53,7 +63,7 @@
   new time database which is the result of adding the time to the site. It also
   timestamps the record with the timestamp received, and adds the favIconUrl of
   the tab as the one for the entire site."
-  [site-times tab time timestamp]
+  [site-times tab time timestamp & {:keys [ignore-set]}]
   (let [host      (hostname (or (:url tab) ""))
         id        (host-key host)
         site-item (or (get site-times id)
@@ -61,6 +71,7 @@
                        :time 0
                        :ts   0})
         track?    (and (not= 0 id)
+                       (not (contains? ignore-set host))
                        (< 0 time))
         new-item  (assoc site-item :time (+ (:time site-item) time)
                                    :icon (:favIconUrl tab)

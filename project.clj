@@ -1,4 +1,4 @@
-(defproject relevance-chrome "0.9.0"
+(defproject relevance-chrome "1.0.0"
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0"]
@@ -43,9 +43,7 @@
                                :optimizations :whitespace
                                :pretty-print  true}}
                }
-
               }
-
   :chromebuild {:resource-paths   ["resources/js"
                                    "resources/dashboard"
                                    "resources/images"

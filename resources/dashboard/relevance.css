@@ -1,0 +1,7 @@
+.has_on_hover span.show_on_hover {
+    visibility: hidden;
+}
+
+.has_on_hover:hover span.show_on_hover {
+    visibility: visible;
+}
