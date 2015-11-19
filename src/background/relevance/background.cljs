@@ -1,5 +1,6 @@
 (ns relevance.background
   (:require [cljs.core.async :refer [>! <!]]
+            [clojure.walk :refer [keywordize-keys]]
             [relevance.data :as data]
             [relevance.io :as io]
             [relevance.migrations :as migrations]
@@ -37,6 +38,16 @@
 ;;;; Functions
 ;;;;-------------------------------------
 
+(defn accumulate-preserve-icons
+  "Accumulates all site times from url-times while preserving the
+  icons stored on site-data"
+  [url-times site-data]
+  (->>
+    ;; Accumulate site times but preserve the icons we had before
+    (data/accumulate-site-times url-times)
+    (map #(vector (key %)
+                  (assoc (val %) :icon (get-in site-data [(key %) :icon]))))
+    (into {})))
 
 (defn check-window-status
   "Checks if we have any focused window, and compares it against the
@@ -82,7 +93,6 @@
         (if our-tab
           (tabs/activate (:id our-tab))
           (tabs/create {:url ext-url})))))
-
 
 
 (defn time-score [tab url-times site-times]
@@ -148,12 +158,7 @@
                        (data/clean-up-ignored ignore-set))
           site-data  (:site-times migrated)
           new-sites  (if (not= new-urls (:url-times migrated))
-                       (->>
-                         ;; Accumulate site times but preserve the icons we had before
-                         (data/accumulate-site-times new-urls)
-                         (map #(vector (key %)
-                                       (assoc (val %) :icon (get-in site-data [(key %) :icon]))))
-                         (into {}))
+                       (accumulate-preserve-icons new-urls site-data)
                        site-data)
           new-data   (assoc migrated :url-times new-urls :site-times new-sites)]
       ; (console/trace "Data load" data "migrated" new-data)
@@ -184,6 +189,23 @@
       (io/save :data (:data new-state))
       new-state)
     ))
+
+(register-handler
+  :delete-url
+  (fn [app-state [_ url]]
+    (let [data      (:data app-state)
+          old-times (:url-times data)
+          new-times (dissoc old-times (url-key url))
+          changed?  (not= old-times new-times)
+          new-data  (if changed?
+                      (assoc data :url-times new-times
+                                  :site-times (accumulate-preserve-icons new-times (:site-times data)))
+                      data)
+          ]
+      (when changed?
+        (io/save :data new-data))
+      (assoc app-state :data new-data)
+      )))
 
 (register-handler
   :handle-activation
@@ -265,10 +287,16 @@
 
 (register-handler
   ::on-message
-  (fn [app-state [_ {:keys [message sender]}]]
-    ; (console/log "GOT INTERNAL MESSAGE" message "from" sender)
-    (condp = (keyword message)
-      :reload-data (go (dispatch [:data-load (<! (io/load :data)) (<! (io/load :settings))])))
+  (fn [app-state [_ payload]]
+    (let [{:keys [message sender]} (keywordize-keys payload)
+          {:keys [action data]} message]
+      ; (console/log "GOT INTERNAL MESSAGE" message "from" sender)
+      (condp = (keyword action)
+        :reload-data (go (dispatch [:data-load (<! (io/load :data)) (<! (io/load :settings))]))
+        :delete-url (dispatch [:delete-url data])
+        (console/error "Nothing matched" message)
+        )
+      )
     app-state
     ))
 

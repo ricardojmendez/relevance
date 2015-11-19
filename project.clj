@@ -43,9 +43,7 @@
                                :optimizations :whitespace
                                :pretty-print  true}}
                }
-
               }
-
   :chromebuild {:resource-paths   ["resources/js"
                                    "resources/dashboard"
                                    "resources/images"

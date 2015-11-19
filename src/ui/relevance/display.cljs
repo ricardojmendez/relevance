@@ -59,8 +59,7 @@
   :app-state-item
   (fn [app-state [_ path item]]
     (when (= [:ui-state :section] path)
-      (js/ga "send" "screenview" #js {:screenName (name item)})
-      )
+      #_(js/ga "send" "screenview" #js {:screenName (name item)}))
     (assoc-in app-state path item)))
 
 
@@ -69,7 +68,7 @@
   (fn [app-state [_ transit-data]]
     ;; We actually just need to save it, since ::storage-changed takes care
     ;; of loading it and importing it.
-    (io/save-raw :data transit-data #(runtime/send-message :reload-data))
+    (io/save-raw :data transit-data #(runtime/send-message {:action :reload-data}))
     (-> app-state
         (assoc-in [:ui-state :section] :url-times)
         (assoc-in [:app-state :import] nil))
@@ -111,7 +110,7 @@
     (when save?
       ;; We tell the backend to reload the data after saving the settings, since
       ;; they can have an effect on behavior.
-      (io/save :settings settings #(runtime/send-message :reload-data))
+      (io/save :settings settings #(runtime/send-message {:action :reload-data}))
       (dispatch [:app-state-item [:ui-state :section] :url-times])
       )
     (assoc app-state :settings settings)))
@@ -228,7 +227,7 @@
                           )
                 ]
             ^{:key i}
-            [:tr
+            [:tr {:class "has_on_hover"}
              [:td {:class "col-sm-1"}
               (time-display (:time tab))]
              [:td {:class "col-sm-9"}
@@ -240,8 +239,13 @@
                         :height 16}])
                display]]
              [:td {:class "col-sm-2"}
-              [:i (merge {:class "fa fa-circle" :style {:color color}})]
-              (time-display (quot age-ms 1000))]
+              [:i {:class "fa fa-circle" :style {:color color}}]
+              (time-display (quot age-ms 1000))
+              [:span {:class "show_on_hover" :style {:text-align "right"}}
+               [:i {:class "fa fa-remove"
+                    :style {:color "red"}
+                    :on-click #(runtime/send-message {:action :delete-url
+                                                      :data url})}]]]
              ]))))))
 
 
