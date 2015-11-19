@@ -430,8 +430,10 @@
           ]]
         ]
        [:div {:class "row"}
-        [:a {:class    "btn btn-danger btn-sm"
-             :on-click #(dispatch [:settings-parse {:ignore-set @our-ignore}])} "Save settings"]]
+        [:div {:class "col-sm-12"}
+         [:a {:class    "btn btn-danger btn-sm"
+              :on-click #(dispatch [:settings-parse {:ignore-set @our-ignore}])} "Save settings"]]
+        ]
        ])))
 
 
