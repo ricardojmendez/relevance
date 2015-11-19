@@ -59,7 +59,7 @@
   :app-state-item
   (fn [app-state [_ path item]]
     (when (= [:ui-state :section] path)
-      #_(js/ga "send" "screenview" #js {:screenName (name item)}))
+      (js/ga "send" "screenview" #js {:screenName (name item)}))
     (assoc-in app-state path item)))
 
 
