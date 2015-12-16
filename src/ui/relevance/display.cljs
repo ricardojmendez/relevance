@@ -329,7 +329,7 @@
    [:div {:class "page-header col-sm-10 col-sm-offset-1"}
     [:h1 "Welcome!"]]
    [:div {:class "col-sm-10 col-sm-offset-1"}
-    [:h2 "Thanks for installing Relevance"]
+    [:h2 "Thanks for installing Relevance 1.0.2"]
     [:p "Relevance is a smart tab organizer. It’s nonintrusive and fully private. When you activate it your tabs are sorted based on the duration you are actively viewing it combined with the total time you actively browse pages on that domain. It will allow you to discover greater insights about your browsing habits."]
     [:p "Relevance will keep track of the pages you actually read, and how long you spend reading them. This information is kept completely private, on your local browser. As you open tabs, its knowledge of what's important to you grows, and when you activate it the tabs  for your current window are ordered depending on how long you have spent reading them."]
     [:p "This creates a natural arrangement where the tabs you have spent the longest on, which are expected to be the most relevant, are placed first, and the ones you haven't read at all are shunted to the end."]
@@ -355,6 +355,15 @@
      " or "
      [:a {:href "http://numergent.com/#contact"} "through our site"]
      "."]]
+   [:div {:class "col-sm-10 col-sm-offset-1"}
+    [:h2 "Latest changes"]
+    [:h4 "v1.0.2"]
+    [:ul
+     [:li "Adjusted the settings for pages that you don't visit often, to make recent sites more relevant."]
+     [:li "Any page that you haven't visited in 45 days will be cleared, unless you spent more than 2.5 hours on it."]
+     [:li "Minor UI adjustments."]
+     ]
+    ]
    [:div {:class "col-sm-10 col-sm-offset-1"}
     [:h2 "Experimental StartPage integration"]
     [:p "Ever ran into a situation where you re-do a search, but can't remember which ones were the most important links?"]
