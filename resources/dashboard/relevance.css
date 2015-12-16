@@ -5,3 +5,7 @@
 .has_on_hover:hover span.show_on_hover {
     visibility: visible;
 }
+
+body {
+    font-size: 16px
+}
