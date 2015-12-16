@@ -400,7 +400,7 @@
        [:div {:class "page-header"} [:h2 "Import data"]]
        [:div {:class "alert alert-warning"}
         [:h4 "Warning!"]
-        [:p "Your reading statistics be replaced with the information you enter below."]]
+        [:p "Your reading statistics will be replaced with the information you enter below."]]
        [:div {:class "row"}
         [:textarea {:class     "form-control"
                     :rows      30
