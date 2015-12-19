@@ -389,7 +389,7 @@
       (if replacing?
         (do
           (dispatch [:handle-deactivation active-tab])
-          (when (not is-none?)
+          (when-not is-none?
             (alarms/clear window-alarm)
             (go (dispatch [:handle-activation
                            (first (<! (tabs/query {:active true :windowId windowId})))])))
