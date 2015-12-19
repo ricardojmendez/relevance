@@ -182,7 +182,7 @@
   (let [modal-info (subscribe [:ui-state :modal-info])
         ;; On the next one, we can't use not-empty because (= nil (not-empty nil)), and :show expects true/false,
         ;; not a truth-ish value.
-        show?      (reaction (not (empty? @modal-info)))]
+        show?      (reaction (seq @modal-info))]
     (fn []
       [Modal {:show @show? :onHide #(dispatch [:modal-info-set nil])}
        [ModalHeader
@@ -201,52 +201,51 @@
 
 (defn list-urls [urls site-data]
   (let [now (.now js/Date)]
-    (->>
-      urls
-      (map-indexed
-        (fn [i tab]
-          (let [url     (:url tab)
-                favicon (:icon (get site-data (host-key (hostname url))))
-                title   (:title tab)
-                label   (if (empty? title)
-                          url
-                          title)
-                display (if (and (= url label)
-                                 (< 80 (count label)))
-                          (clojure.string/join (concat (take 80 label) "..."))
-                          label)
-                age-ms  (- now (:ts tab))
-                ;; Colors picked at http://www.w3schools.com/tags/ref_colorpicker.asp
-                color   (cond
-                          (< age-ms ms-hour) "#00ff00"
-                          (< age-ms ms-day) "#00cc00"
-                          (< age-ms (* 3 ms-day)) "#009900"
-                          (< age-ms (* 7 ms-day)) "#ff8000"
-                          (< age-ms (* 14 ms-day)) "#cc6600"
-                          :else "#994c00"
-                          )
-                ]
-            ^{:key i}
-            [:tr {:class "has_on_hover"}
-             [:td {:class "col-sm-1"}
-              (time-display (:time tab))]
-             [:td {:class "col-sm-9"}
-              [:a
-               {:href url :target "_blank"}
-               (if favicon
-                 [:img {:src    favicon
-                        :width  16
-                        :height 16}])
-               display]]
-             [:td {:class "col-sm-2"}
-              [:i {:class "fa fa-circle" :style {:color color}}]
-              (time-display (quot age-ms 1000))
-              [:span {:class "show_on_hover" :style {:text-align "right"}}
-               [:i {:class "fa fa-remove"
-                    :style {:color "red"}
-                    :on-click #(runtime/send-message {:action :delete-url
-                                                      :data url})}]]]
-             ]))))))
+    (map-indexed
+      (fn [i tab]
+        (let [url     (:url tab)
+              favicon (:icon (get site-data (host-key (hostname url))))
+              title   (:title tab)
+              label   (if (empty? title)
+                        url
+                        title)
+              display (if (and (= url label)
+                               (< 80 (count label)))
+                        (clojure.string/join (concat (take 80 label) "..."))
+                        label)
+              age-ms  (- now (:ts tab))
+              ;; Colors picked at http://www.w3schools.com/tags/ref_colorpicker.asp
+              color   (cond
+                        (< age-ms ms-hour) "#00ff00"
+                        (< age-ms ms-day) "#00cc00"
+                        (< age-ms (* 3 ms-day)) "#009900"
+                        (< age-ms (* 7 ms-day)) "#ff8000"
+                        (< age-ms (* 14 ms-day)) "#cc6600"
+                        :else "#994c00"
+                        )
+              ]
+          ^{:key i}
+          [:tr {:class "has_on_hover"}
+           [:td {:class "col-sm-1"}
+            (time-display (:time tab))]
+           [:td {:class "col-sm-9"}
+            [:a
+             {:href url :target "_blank"}
+             (if favicon
+               [:img {:src    favicon
+                      :width  16
+                      :height 16}])
+             display]]
+           [:td {:class "col-sm-2"}
+            [:i {:class "fa fa-circle" :style {:color color}}]
+            (time-display (quot age-ms 1000))
+            [:span {:class "show_on_hover" :style {:text-align "right"}}
+             [:i {:class "fa fa-remove"
+                  :style {:color "red"}
+                  :on-click #(runtime/send-message {:action :delete-url
+                                                    :data url})}]]]
+           ]))
+      urls)))
 
 
 (defn div-urltimes []
@@ -306,21 +305,20 @@
             [:th "Time"]
             [:th "Site"]]]
           [:tbody
-           (->>
-             @to-list
-             (map-indexed
-               (fn [i site]
-                 (let [url  (:host site)
-                       icon (:icon site)]
-                   ^{:key i}
-                   [:tr
-                    [:td {:class "col-sm-1"} (time-display (:time site))]
-                    [:td {:class "col-sm-6"} (if icon
-                                               [:img {:src    icon
-                                                      :width  16
-                                                      :height 16}])
-                     url]
-                    ]))))]
+           (map-indexed
+             (fn [i site]
+               (let [url  (:host site)
+                     icon (:icon site)]
+                 ^{:key i}
+                 [:tr
+                  [:td {:class "col-sm-1"} (time-display (:time site))]
+                  [:td {:class "col-sm-6"} (if icon
+                                             [:img {:src    icon
+                                                    :width  16
+                                                    :height 16}])
+                   url]
+                  ]))
+             @to-list)]
           ]]]])
     ))
 

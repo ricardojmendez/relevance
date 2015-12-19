@@ -77,8 +77,7 @@
   the result."
   [url]
   (if (not-empty url)
-    (let [element   (-> (dommy/create-element :a)
-                        (dommy/set-attr! :href url))
+    (let [element   (dommy/set-attr! (dommy/create-element :a) :href url)
           shortened (str (.toLowerCase (.-host element)) (.-pathname element) (.-search element))]
       (hash-string shortened))
     0))
