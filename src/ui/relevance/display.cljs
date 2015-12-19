@@ -213,7 +213,7 @@
                           title)
                 display (if (and (= url label)
                                  (< 80 (count label)))
-                          (apply str (concat (take 80 label) "..."))
+                          (clojure.string/join (concat (take 80 label) "..."))
                           label)
                 age-ms  (- now (:ts tab))
                 ;; Colors picked at http://www.w3schools.com/tags/ref_colorpicker.asp

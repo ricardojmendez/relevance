@@ -97,8 +97,10 @@
   "Returns a display string for a number of seconds"
   [seconds]
   (letfn [(time-label [major major-label minor minor-label]
-            (apply str (concat [major major-label]
-                               (when (pos? minor) [" " minor minor-label]))))]
+            (clojure.string/join
+              (concat
+                [major major-label]
+                (when (pos? minor) [" " minor minor-label]))))]
     (cond
       (< seconds 1) "< 1s"
       (< seconds 60) (str seconds "s")
