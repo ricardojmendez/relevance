@@ -30,7 +30,7 @@
                                             (-> (val %)
                                                 (assoc :time (quot (:time (val %)) 1000))
                                                 (rename-keys {:timestamp :ts}))))
-                              (remove #(= 0 (:time (second %))))))]
+                              (remove #(zero? (:time (second %))))))]
         (assoc data
           :data-version 3
           :url-times url-times

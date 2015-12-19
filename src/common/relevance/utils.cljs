@@ -98,7 +98,7 @@
   [seconds]
   (letfn [(time-label [major major-label minor minor-label]
             (apply str (concat [major major-label]
-                               (when (< 0 minor) [" " minor minor-label]))))]
+                               (when (pos? minor) [" " minor minor-label]))))]
     (cond
       (< seconds 1) "< 1s"
       (< seconds 60) (str seconds "s")
