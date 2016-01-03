@@ -182,7 +182,7 @@
   (let [modal-info (subscribe [:ui-state :modal-info])
         ;; On the next one, we can't use not-empty because (= nil (not-empty nil)), and :show expects true/false,
         ;; not a truth-ish value.
-        show?      (reaction (not (empty? @modal-info)))]
+        show?      (reaction (seq @modal-info))]
     (fn []
       [Modal {:show @show? :onHide #(dispatch [:modal-info-set nil])}
        [ModalHeader
@@ -201,52 +201,51 @@
 
 (defn list-urls [urls site-data]
   (let [now (.now js/Date)]
-    (->>
-      urls
-      (map-indexed
-        (fn [i tab]
-          (let [url     (:url tab)
-                favicon (:icon (get site-data (host-key (hostname url))))
-                title   (:title tab)
-                label   (if (empty? title)
-                          url
-                          title)
-                display (if (and (= url label)
-                                 (< 80 (count label)))
-                          (apply str (concat (take 80 label) "..."))
-                          label)
-                age-ms  (- now (:ts tab))
-                ;; Colors picked at http://www.w3schools.com/tags/ref_colorpicker.asp
-                color   (cond
-                          (< age-ms ms-hour) "#00ff00"
-                          (< age-ms ms-day) "#00cc00"
-                          (< age-ms (* 3 ms-day)) "#009900"
-                          (< age-ms (* 7 ms-day)) "#ff8000"
-                          (< age-ms (* 14 ms-day)) "#cc6600"
-                          :else "#994c00"
-                          )
-                ]
-            ^{:key i}
-            [:tr {:class "has_on_hover"}
-             [:td {:class "col-sm-1"}
-              (time-display (:time tab))]
-             [:td {:class "col-sm-9"}
-              [:a
-               {:href url :target "_blank"}
-               (if favicon
-                 [:img {:src    favicon
-                        :width  16
-                        :height 16}])
-               display]]
-             [:td {:class "col-sm-2"}
-              [:i {:class "fa fa-circle" :style {:color color}}]
-              (time-display (quot age-ms 1000))
-              [:span {:class "show_on_hover" :style {:text-align "right"}}
-               [:i {:class "fa fa-remove"
-                    :style {:color "red"}
-                    :on-click #(runtime/send-message {:action :delete-url
-                                                      :data url})}]]]
-             ]))))))
+    (map-indexed
+      (fn [i tab]
+        (let [url     (:url tab)
+              favicon (:icon (get site-data (host-key (hostname url))))
+              title   (:title tab)
+              label   (if (empty? title)
+                        url
+                        title)
+              display (if (and (= url label)
+                               (< 80 (count label)))
+                        (clojure.string/join (concat (take 80 label) "..."))
+                        label)
+              age-ms  (- now (:ts tab))
+              ;; Colors picked at http://www.w3schools.com/tags/ref_colorpicker.asp
+              color   (cond
+                        (< age-ms ms-hour) "#00ff00"
+                        (< age-ms ms-day) "#00cc00"
+                        (< age-ms (* 3 ms-day)) "#009900"
+                        (< age-ms (* 7 ms-day)) "#ff8000"
+                        (< age-ms (* 14 ms-day)) "#cc6600"
+                        :else "#994c00"
+                        )
+              ]
+          ^{:key i}
+          [:tr {:class "has_on_hover"}
+           [:td {:class "col-sm-1"}
+            (time-display (:time tab))]
+           [:td {:class "col-sm-9"}
+            [:a
+             {:href url :target "_blank"}
+             (if favicon
+               [:img {:src    favicon
+                      :width  16
+                      :height 16}])
+             display]]
+           [:td {:class "col-sm-2"}
+            [:i {:class "fa fa-circle" :style {:color color}}]
+            (time-display (quot age-ms 1000))
+            [:span {:class "show_on_hover" :style {:text-align "right"}}
+             [:i {:class "fa fa-remove"
+                  :style {:color "red"}
+                  :on-click #(runtime/send-message {:action :delete-url
+                                                    :data url})}]]]
+           ]))
+      urls)))
 
 
 (defn div-urltimes []
@@ -306,21 +305,20 @@
             [:th "Time"]
             [:th "Site"]]]
           [:tbody
-           (->>
-             @to-list
-             (map-indexed
-               (fn [i site]
-                 (let [url  (:host site)
-                       icon (:icon site)]
-                   ^{:key i}
-                   [:tr
-                    [:td {:class "col-sm-1"} (time-display (:time site))]
-                    [:td {:class "col-sm-6"} (if icon
-                                               [:img {:src    icon
-                                                      :width  16
-                                                      :height 16}])
-                     url]
-                    ]))))]
+           (map-indexed
+             (fn [i site]
+               (let [url  (:host site)
+                     icon (:icon site)]
+                 ^{:key i}
+                 [:tr
+                  [:td {:class "col-sm-1"} (time-display (:time site))]
+                  [:td {:class "col-sm-6"} (if icon
+                                             [:img {:src    icon
+                                                    :width  16
+                                                    :height 16}])
+                   url]
+                  ]))
+             @to-list)]
           ]]]])
     ))
 
@@ -329,7 +327,8 @@
    [:div {:class "page-header col-sm-10 col-sm-offset-1"}
     [:h1 "Welcome!"]]
    [:div {:class "col-sm-10 col-sm-offset-1"}
-    [:h2 "Thanks for installing Relevance 1.0.2"]
+    [:h2 "Thanks for installing Relevance 1.0.3"]
+    [:p [:a {:href "http://numergent.com/relevance/" :target "_blank"} "You can read about the latest changes here."]]
     [:p "Relevance is a smart tab organizer. It’s nonintrusive and fully private. When you activate it your tabs are sorted based on the duration you are actively viewing it combined with the total time you actively browse pages on that domain. It will allow you to discover greater insights about your browsing habits."]
     [:p "Relevance will keep track of the pages you actually read, and how long you spend reading them. This information is kept completely private, on your local browser. As you open tabs, its knowledge of what's important to you grows, and when you activate it the tabs  for your current window are ordered depending on how long you have spent reading them."]
     [:p "This creates a natural arrangement where the tabs you have spent the longest on, which are expected to be the most relevant, are placed first, and the ones you haven't read at all are shunted to the end."]
@@ -355,15 +354,6 @@
      " or "
      [:a {:href "http://numergent.com/#contact"} "through our site"]
      "."]]
-   [:div {:class "col-sm-10 col-sm-offset-1"}
-    [:h2 "Latest changes"]
-    [:h4 "v1.0.2"]
-    [:ul
-     [:li "Adjusted the settings for pages that you don't visit often, to make recent sites more relevant."]
-     [:li "Any page that you haven't visited in 45 days will be cleared, unless you spent more than 2.5 hours on it."]
-     [:li "Minor UI adjustments."]
-     ]
-    ]
    [:div {:class "col-sm-10 col-sm-offset-1"}
     [:h2 "Experimental StartPage integration"]
     [:p "Ever ran into a situation where you re-do a search, but can't remember which ones were the most important links?"]

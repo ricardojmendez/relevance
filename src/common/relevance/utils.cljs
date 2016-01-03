@@ -77,8 +77,7 @@
   the result."
   [url]
   (if (not-empty url)
-    (let [element   (-> (dommy/create-element :a)
-                        (dommy/set-attr! :href url))
+    (let [element   (dommy/set-attr! (dommy/create-element :a) :href url)
           shortened (str (.toLowerCase (.-host element)) (.-pathname element) (.-search element))]
       (hash-string shortened))
     0))
@@ -97,8 +96,10 @@
   "Returns a display string for a number of seconds"
   [seconds]
   (letfn [(time-label [major major-label minor minor-label]
-            (apply str (concat [major major-label]
-                               (when (< 0 minor) [" " minor minor-label]))))]
+            (clojure.string/join
+              (concat
+                [major major-label]
+                (when (pos? minor) [" " minor minor-label]))))]
     (cond
       (< seconds 1) "< 1s"
       (< seconds 60) (str seconds "s")

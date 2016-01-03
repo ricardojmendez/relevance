@@ -49,7 +49,7 @@
                       :ts   0})
         track?   (and (not= 0 id)
                       (not (contains? ignore-set (hostname url)))
-                      (< 0 time))
+                      (pos? time))
         new-item (assoc url-item :time (+ (:time url-item) time)
                                  :title (:title tab)
                                  :ts timestamp)]
@@ -72,7 +72,7 @@
                        :ts   0})
         track?    (and (not= 0 id)
                        (not (contains? ignore-set host))
-                       (< 0 time))
+                       (pos? time))
         new-item  (assoc site-item :time (+ (:time site-item) time)
                                    :icon (:favIconUrl tab)
                                    :ts timestamp)]
