@@ -1,5 +1,5 @@
 (ns relevance.data
-  (:require [relevance.utils :refer [url-key host-key hostname]]
+  (:require [relevance.utils :refer [url-key is-http? host-key hostname]]
             [khroma.log :as console]))
 
 
@@ -48,6 +48,7 @@
                       :time 0
                       :ts   0})
         track?   (and (not= 0 id)
+                      (is-http? url)
                       (not (contains? ignore-set (hostname url)))
                       (pos? time))
         new-item (assoc url-item :time (+ (:time url-item) time)
@@ -64,13 +65,15 @@
   timestamps the record with the timestamp received, and adds the favIconUrl of
   the tab as the one for the entire site."
   [site-times tab time timestamp & {:keys [ignore-set]}]
-  (let [host      (hostname (or (:url tab) ""))
+  (let [url       (:url tab)
+        host      (hostname (or url ""))
         id        (host-key host)
         site-item (or (get site-times id)
                       {:host host
                        :time 0
                        :ts   0})
         track?    (and (not= 0 id)
+                       (is-http? url)
                        (not (contains? ignore-set host))
                        (pos? time))
         new-item  (assoc site-item :time (+ (:time site-item) time)

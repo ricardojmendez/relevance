@@ -117,6 +117,7 @@
                     "https://numergent.com/" true
                     "chrome://extensions/?id=okhigbflgnbihoiokilagelkalkcigfp" false
                     "view-source:http://localhost:4000/opensource/" false
+                    "file:///Users/myuser/file.html" false
                     "http" false
                     "" false
                     nil false
