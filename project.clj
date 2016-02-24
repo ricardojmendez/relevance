@@ -1,11 +1,11 @@
-(defproject relevance-chrome "1.0.3"
+(defproject relevance-chrome "1.0.4"
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.clojure/clojurescript "1.7.189"]
+                 [org.clojure/clojurescript "1.7.228"]
                  [org.clojure/core.async "0.2.374"]
-                 [com.cognitect/transit-cljs "0.8.232"]
-                 [cljsjs/react-bootstrap "0.27.3-0" :exclusions [org.webjars.bower/jquery]]
+                 [com.cognitect/transit-cljs "0.8.237"]
+                 [cljsjs/react-bootstrap "0.28.1-1" :exclusions [org.webjars.bower/jquery]]
                  [khroma "0.3.0"]
                  [prismatic/dommy "1.1.0"]
                  [re-frame "0.6.0" :exclusions [cljsjs/react]]
