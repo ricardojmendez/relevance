@@ -27,8 +27,9 @@
 
 
 (def window-alarm "window-alarm")
-(def non-http-penalty 0.05)
-(def relevant-tab-keys [:windowId :id :active :url :start-time :title :favIconUrl])
+(def non-http-penalty 0.01)
+(def sound-extra-score 9888777666)
+(def relevant-tab-keys [:windowId :id :active :url :start-time :title :favIconUrl :audible])
 (def select-tab-keys #(select-keys % relevant-tab-keys))
 
 (defn now [] (.now js/Date))
@@ -95,22 +96,30 @@
           (tabs/create {:url ext-url})))))
 
 
-(defn time-score [tab url-times site-times]
-  (let [url       (:url tab)
-        idx       (:index tab)
-        tab-time  (:time (get url-times (url-key url)))
-        site-time (:time (get site-times (host-key (hostname url))))
-        total     (+ tab-time site-time)
-        score     (if (is-http? url) total (* total non-http-penalty))
+(defn time-score [tab url-times site-times settings]
+  (let [url           (:url tab)
+        idx           (:index tab)
+        url-time      (:time (get url-times (url-key url)))
+        is-priority?  (and (:sound-to-left? settings)
+                           (:audible tab))
+        tab-time      (if is-priority?
+                        (+ sound-extra-score idx)
+                        url-time)
+        site-time     (:time (get site-times (host-key (hostname url))))
+        total         (+ tab-time site-time)
+        is-penalized? (and (not (is-http? url))
+                           (not is-priority?))
+        score         (if is-penalized? (* total non-http-penalty) total)
         ]
     (or (when tab-time score)
         (- idx))))
 
-(defn sort-tabs! [window-id data]
+(defn sort-tabs! [window-id app-state]
   (go
-    (let [{:keys [url-times site-times]} data
+    (let [{:keys [settings data]} app-state
+          {:keys [url-times site-times]} data
           tabs (->> (:tabs (<! (windows/get window-id)))
-                    (map #(assoc % :time (time-score % url-times site-times)))
+                    (map #(assoc % :time (time-score % url-times site-times settings)))
                     (sort-by #(* -1 (:time %)))
                     (map-indexed #(hash-map :index %1
                                             :id (:id %2))))]
@@ -314,7 +323,7 @@
 (register-handler
   :on-relevance-sort-tabs
   (fn [app-state [_ tab]]
-    (sort-tabs! (:windowId tab) (:data app-state))
+    (sort-tabs! (:windowId tab) app-state)
     app-state))
 
 
