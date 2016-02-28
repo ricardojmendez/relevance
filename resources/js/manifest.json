@@ -1,7 +1,7 @@
 {
   "name": "Relevance - Smart Tab Organizer",
   "short_name": "Relevance",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "browser_action": {
     "default_title": "Organize tabs",
     "default_icon": {
