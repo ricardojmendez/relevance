@@ -159,6 +159,21 @@
       (is (= result (:url-times test-db)))
 
       ))
+  (testing "Non-http URLs aren't tracked"
+    (let [tab     {:url   "file:///Users/my-user/the-file.html"
+                   :title "Numergent limited"}
+          ts      1445964037799
+          result  (data/track-url-time (:url-times test-db)
+                                       tab
+                                       9
+                                       ts)
+          tab-key (utils/url-key "file:///Users/my-user/the-file.html")
+          item    (get result tab-key)]
+      (is result)
+      (is (= 7 (count result)) "We shouldn't have added an element")
+      (is (nil? item) "We should not have the URL on our list")
+      (is (= result (:url-times test-db)) "Database should not have been altered")
+      ))
   (testing "Add time to a new tab on an empty set"
     (let [tab     {:url        "http://numergent.com/"
                    :title      "Numergent limited"

@@ -98,8 +98,10 @@
 (register-handler
   :settings-parse
   (fn [app-state [_ settings]]
+    (console/log settings)
     (let [ignore-set (utils/to-string-set (:ignore-set settings))]
-      (dispatch [:settings-set {:ignore-set ignore-set} true])
+      (dispatch [:settings-set {:ignore-set     ignore-set
+                                :sound-to-left? (:sound-to-left? settings)} true])
       app-state)
     ))
 
@@ -240,10 +242,10 @@
             [:i {:class "fa fa-circle" :style {:color color}}]
             (time-display (quot age-ms 1000))
             [:span {:class "show_on_hover" :style {:text-align "right"}}
-             [:i {:class "fa fa-remove"
-                  :style {:color "red"}
+             [:i {:class    "fa fa-remove"
+                  :style    {:color "red"}
                   :on-click #(runtime/send-message {:action :delete-url
-                                                    :data url})}]]]
+                                                    :data   url})}]]]
            ]))
       urls)))
 
@@ -327,7 +329,7 @@
    [:div {:class "page-header col-sm-10 col-sm-offset-1"}
     [:h1 "Welcome!"]]
    [:div {:class "col-sm-10 col-sm-offset-1"}
-    [:h2 "Thanks for installing Relevance 1.0.3"]
+    [:h2 "Thanks for installing Relevance 1.0.4"]
     [:p [:a {:href "http://numergent.com/relevance/" :target "_blank"} "You can read about the latest changes here."]]
     [:p "Relevance is a smart tab organizer. It’s nonintrusive and fully private. When you activate it your tabs are sorted based on the duration you are actively viewing it combined with the total time you actively browse pages on that domain. It will allow you to discover greater insights about your browsing habits."]
     [:p "Relevance will keep track of the pages you actually read, and how long you spend reading them. This information is kept completely private, on your local browser. As you open tabs, its knowledge of what's important to you grows, and when you activate it the tabs  for your current window are ordered depending on how long you have spent reading them."]
@@ -361,19 +363,19 @@
      [:a {:href "https://startpage.com" :target "_blank"} "StartPage"]
      ". After you run a search, it'll look at the results on your current page and re-prioritize the links shown to bring to the front those you have spent the longest reading."]
     [:p "Every search engine behaves differently, so if there's enough interest, I could extend this integration to others as well."]]
-   [:div
-    [:div {:class "col-sm-6"}
-     [:div {:class "col-sm-12"}
-      [:strong "Before"]]
-     [:div {:class "col-sm-12"}
-      [:img {:src "http://numergent.com/images/relevance/relevance-0.3-clojure chrome before.png"}]]
-     ]
-    [:div {:class "col-sm-6"}
-     [:div {:class "col-sm-12"}
-      [:strong "After"]]
-     [:div {:class "col-sm-12"}
-      [:img {:src "http://numergent.com/images/relevance/relevance-0.3-clojure chrome after.png"}]]
-     ]]
+   #_[:div
+      [:div {:class "col-sm-6"}
+       [:div {:class "col-sm-12"}
+        [:strong "Before"]]
+       [:div {:class "col-sm-12"}
+        [:img {:src "http://numergent.com/images/relevance/relevance-0.3-clojure chrome before.png"}]]
+       ]
+      [:div {:class "col-sm-6"}
+       [:div {:class "col-sm-12"}
+        [:strong "After"]]
+       [:div {:class "col-sm-12"}
+        [:img {:src "http://numergent.com/images/relevance/relevance-0.3-clojure chrome after.png"}]]
+       ]]
    ]
   )
 
@@ -414,28 +416,50 @@
        ])))
 
 (defn div-settings []
-  (let [ignore-set (subscribe [:settings :ignore-set])
-        our-ignore (reagent/atom (string/join "\n" (sort @ignore-set)))
+  (let [ignore-set     (subscribe [:settings :ignore-set])
+        sound-to-left? (subscribe [:settings :sound-to-left?])
+        our-ignore     (reagent/atom (string/join "\n" (sort @ignore-set)))
+        our-sound      (reagent/atom @sound-to-left?)
         ]
     (fn []
+      (console/log @sound-to-left? @our-sound)
       [:div {:class "col-sm-12"}
        [:div {:class "row"}
-        [:div {:class "col-sm-6"}
+        [:div {:class "col-sm-12"}
          [:h3 "Ignore domains"]
-         [:p "Type on the left domains that you want ignore, one per line."]
-         [:p {:class "alert alert-info"} [:strong "Heads up! "] "Adding a domain to the ignore list will remove the data Relevance currently has for it."]
          ]
         [:div {:class "col-sm-6"}
+         [:p "Type below the domains that you want ignore, one per line."]
          [:textarea {:class     "form-control"
                      :value     @our-ignore
                      :rows      10
                      :on-change #(reset! our-ignore (-> % .-target .-value))}
-          ]]
+          ]
+         ]
+        [:div {:class "col-sm-6"}
+         [:p {:class "alert alert-info"} [:strong "Heads up! "] "Adding a domain to the ignore list will remove the data Relevance currently has for it."]
+         ]
+        ]
+       [:div {:class "row"}
+        [:div {:class "col-sm-12"}
+         [:h3 "Prioritize tabs with sound?"]]
+        [:div {:class "col-sm-6"}
+         [:p
+          [:input {:type      :checkbox
+                   :checked   @our-sound
+                   :on-change #(reset! our-sound (-> % .-target .-checked))
+                   :style     {:margin-right "4px"}
+                   }]
+          "If selected, tabs with sound will be prioritized, and moved to the left when sorting."]
+         ]
+        [:div {:class "col-sm-6"}]
+
         ]
        [:div {:class "row"}
         [:div {:class "col-sm-12"}
          [:a {:class    "btn btn-danger btn-sm"
-              :on-click #(dispatch [:settings-parse {:ignore-set @our-ignore}])} "Save settings"]]
+              :on-click #(dispatch [:settings-parse {:ignore-set     @our-ignore
+                                                     :sound-to-left? @our-sound}])} "Save settings"]]
         ]
        ])))
 
