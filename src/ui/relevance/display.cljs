@@ -331,6 +331,16 @@
    [:div {:class "col-sm-10 col-sm-offset-1"}
     [:h2 "Thanks for installing Relevance 1.0.4"]
     [:p [:a {:href "http://numergent.com/relevance/" :target "_blank"} "You can read about the latest changes here."]]
+    [:p "Relevance will help you sort your tabs when you have too many of them open. Here's how to use it:"]
+    [:ul
+     [:li "Use Chrome as you normally would. Relevance will privately track your reading habits."]
+     [:li "When you have too many tabs open on a window and need to organize them, click on the Relevance button on the browser bar."]
+     [:li "If you want to see your own data, right click on the Relevance button and select "
+      [:i "Show Relevance Data"] "."]]
+    [:p "That's it! Enjoy!"]
+    ]
+   [:div {:class "col-sm-10 col-sm-offset-1"}
+    [:h2 "About Relevance"]
     [:p "Relevance is a smart tab organizer. It’s nonintrusive and fully private. When you activate it your tabs are sorted based on the duration you are actively viewing it combined with the total time you actively browse pages on that domain. It will allow you to discover greater insights about your browsing habits."]
     [:p "Relevance will keep track of the pages you actually read, and how long you spend reading them. This information is kept completely private, on your local browser. As you open tabs, its knowledge of what's important to you grows, and when you activate it the tabs  for your current window are ordered depending on how long you have spent reading them."]
     [:p "This creates a natural arrangement where the tabs you have spent the longest on, which are expected to be the most relevant, are placed first, and the ones you haven't read at all are shunted to the end."]
