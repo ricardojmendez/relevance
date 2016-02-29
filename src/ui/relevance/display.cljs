@@ -265,6 +265,11 @@
                                    (take per-page)))]
     (fn []
       [:div {:class "row"}
+       [:p "If you wish to delete an item, hover the mouse over the listing. You'll see a "
+        [:i {:class    "fa fa-remove"
+             :style    {:color "red"}}]
+        " appear besides the last visit time. Click it to remove the row."
+        ]
        [:p "Total: " @total " URLs."]
        (when (< per-page @total)
          [Pagination
@@ -329,8 +334,18 @@
    [:div {:class "page-header col-sm-10 col-sm-offset-1"}
     [:h1 "Welcome!"]]
    [:div {:class "col-sm-10 col-sm-offset-1"}
-    [:h2 "Thanks for installing Relevance 1.0.4"]
+    [:h2 "Thanks for installing Relevance 1.0.5"]
     [:p [:a {:href "http://numergent.com/relevance/" :target "_blank"} "You can read about the latest changes here."]]
+    [:p "Relevance will help you sort your tabs when you have too many of them open. Here's how to use it:"]
+    [:ul
+     [:li "Use Chrome as you normally would. Relevance will privately track your reading habits."]
+     [:li "When you have too many tabs open on a window and need to organize them, click on the Relevance button on the browser bar."]
+     [:li "If you want to see your own data, right click on the Relevance button and select "
+      [:i "Show Relevance Data"] "."]]
+    [:p "That's it! Enjoy!"]
+    ]
+   [:div {:class "col-sm-10 col-sm-offset-1"}
+    [:h2 "About Relevance"]
     [:p "Relevance is a smart tab organizer. It’s nonintrusive and fully private. When you activate it your tabs are sorted based on the duration you are actively viewing it combined with the total time you actively browse pages on that domain. It will allow you to discover greater insights about your browsing habits."]
     [:p "Relevance will keep track of the pages you actually read, and how long you spend reading them. This information is kept completely private, on your local browser. As you open tabs, its knowledge of what's important to you grows, and when you activate it the tabs  for your current window are ordered depending on how long you have spent reading them."]
     [:p "This creates a natural arrangement where the tabs you have spent the longest on, which are expected to be the most relevant, are placed first, and the ones you haven't read at all are shunted to the end."]
@@ -363,19 +378,6 @@
      [:a {:href "https://startpage.com" :target "_blank"} "StartPage"]
      ". After you run a search, it'll look at the results on your current page and re-prioritize the links shown to bring to the front those you have spent the longest reading."]
     [:p "Every search engine behaves differently, so if there's enough interest, I could extend this integration to others as well."]]
-   #_[:div
-      [:div {:class "col-sm-6"}
-       [:div {:class "col-sm-12"}
-        [:strong "Before"]]
-       [:div {:class "col-sm-12"}
-        [:img {:src "http://numergent.com/images/relevance/relevance-0.3-clojure chrome before.png"}]]
-       ]
-      [:div {:class "col-sm-6"}
-       [:div {:class "col-sm-12"}
-        [:strong "After"]]
-       [:div {:class "col-sm-12"}
-        [:img {:src "http://numergent.com/images/relevance/relevance-0.3-clojure chrome after.png"}]]
-       ]]
    ]
   )
 
