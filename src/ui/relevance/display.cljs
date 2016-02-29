@@ -265,6 +265,11 @@
                                    (take per-page)))]
     (fn []
       [:div {:class "row"}
+       [:p "If you wish to delete an item, hover the mouse over the listing. You'll see a "
+        [:i {:class    "fa fa-remove"
+             :style    {:color "red"}}]
+        " appear besides the last visit time. Click it to remove the row."
+        ]
        [:p "Total: " @total " URLs."]
        (when (< per-page @total)
          [Pagination
@@ -373,19 +378,6 @@
      [:a {:href "https://startpage.com" :target "_blank"} "StartPage"]
      ". After you run a search, it'll look at the results on your current page and re-prioritize the links shown to bring to the front those you have spent the longest reading."]
     [:p "Every search engine behaves differently, so if there's enough interest, I could extend this integration to others as well."]]
-   #_[:div
-      [:div {:class "col-sm-6"}
-       [:div {:class "col-sm-12"}
-        [:strong "Before"]]
-       [:div {:class "col-sm-12"}
-        [:img {:src "http://numergent.com/images/relevance/relevance-0.3-clojure chrome before.png"}]]
-       ]
-      [:div {:class "col-sm-6"}
-       [:div {:class "col-sm-12"}
-        [:strong "After"]]
-       [:div {:class "col-sm-12"}
-        [:img {:src "http://numergent.com/images/relevance/relevance-0.3-clojure chrome after.png"}]]
-       ]]
    ]
   )
 
