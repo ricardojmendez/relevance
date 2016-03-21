@@ -4,6 +4,7 @@
             [relevance.data :as data]
             [relevance.io :as io]
             [relevance.migrations :as migrations]
+            [relevance.order :refer [time-score score-tabs]]
             [relevance.utils :refer [on-channel url-key host-key hostname is-http? ms-day]]
             [relevance.settings :refer [default-settings]]
             [khroma.alarms :as alarms]
@@ -27,8 +28,6 @@
 
 
 (def window-alarm "window-alarm")
-(def non-http-penalty 0.01)
-(def sound-extra-score 9888777666)
 (def relevant-tab-keys [:windowId :id :active :url :start-time :title :favIconUrl :audible])
 (def select-tab-keys #(select-keys % relevant-tab-keys))
 
@@ -96,33 +95,14 @@
           (tabs/create {:url ext-url})))))
 
 
-(defn time-score [tab url-times site-times settings]
-  (let [url           (:url tab)
-        idx           (:index tab)
-        url-time      (:time (get url-times (url-key url)))
-        is-priority?  (and (:sound-to-left? settings)
-                           (:audible tab))
-        tab-time      (if is-priority?
-                        (+ sound-extra-score idx)
-                        url-time)
-        site-time     (:time (get site-times (host-key (hostname url))))
-        total         (+ tab-time site-time)
-        is-penalized? (and (not (is-http? url))
-                           (not is-priority?))
-        score         (if is-penalized? (* total non-http-penalty) total)]
-
-    (or (when tab-time score)
-        (- idx))))
-
 (defn sort-tabs! [window-id app-state]
   (go
     (let [{:keys [settings data]} app-state
           {:keys [url-times site-times]} data
-          tabs (->> (:tabs (<! (windows/get window-id)))
-                    (map #(assoc % :time (time-score % url-times site-times settings)))
-                    (sort-by #(* -1 (:time %)))
-                    (map-indexed #(hash-map :index %1
-                                            :id (:id %2))))]
+          tabs (score-tabs (:tabs (<! (windows/get window-id)))
+                           url-times
+                           site-times
+                           settings)]
       (doseq [tab tabs]
         (tabs/move (:id tab) {:index (:index tab)})))))
 
