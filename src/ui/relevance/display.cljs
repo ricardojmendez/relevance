@@ -13,8 +13,8 @@
             [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
             [relevance.io :as io]
             [relevance.utils :as utils]
-            [relevance.settings :refer [default-settings]]
-            )
+            [relevance.settings :refer [default-settings]])
+
   (:require-macros [cljs.core :refer [goog-define]]
                    [cljs.core.async.macros :refer [go go-loop]]
                    [reagent.ratom :refer [reaction]]))
@@ -71,8 +71,8 @@
     (io/save-raw :data transit-data #(runtime/send-message {:action :reload-data}))
     (-> app-state
         (assoc-in [:ui-state :section] :url-times)
-        (assoc-in [:app-state :import] nil))
-    ))
+        (assoc-in [:app-state :import] nil))))
+
 
 
 (register-handler
@@ -102,8 +102,8 @@
     (let [ignore-set (utils/to-string-set (:ignore-set settings))]
       (dispatch [:settings-set {:ignore-set     ignore-set
                                 :sound-to-left? (:sound-to-left? settings)} true])
-      app-state)
-    ))
+      app-state)))
+
 
 (register-handler
   :settings-set
@@ -113,8 +113,8 @@
       ;; We tell the backend to reload the data after saving the settings, since
       ;; they can have an effect on behavior.
       (io/save :settings settings #(runtime/send-message {:action :reload-data}))
-      (dispatch [:app-state-item [:ui-state :section] :url-times])
-      )
+      (dispatch [:app-state-item [:ui-state :section] :url-times]))
+
     (assoc app-state :settings settings)))
 
 (register-handler
@@ -124,9 +124,9 @@
           data      (from-transit new-value)]
       (if (not-empty data)
         (assoc app-state :data data :raw-data new-value)
-        app-state
-        ))
-    ))
+        app-state))))
+
+
 
 
 ;;;;------------------------------
@@ -148,9 +148,9 @@
   [:li {:class (when (= section current) "active")}
    [:a {:on-click #(dispatch [:app-state-item [:ui-state :section] section])}
     [:i {:class class}]
-    [:p label]
-    ]]
-  )
+    [:p label]]])
+
+
 
 (defn nav-left []
   (let [section (subscribe [:ui-state :section])]
@@ -161,8 +161,8 @@
        (nav-left-item "Site times" "pe-7s-note2" :site-times @section)
        (nav-left-item "Settings" "pe-7s-config" :settings @section)
        (nav-left-item "Export data" "pe-7s-box1" :export @section)
-       (nav-left-item "Import data" "pe-7s-attention" :import @section)]))
-  )
+       (nav-left-item "Import data" "pe-7s-attention" :import @section)])))
+
 
 (defn nav-top []
   (let [section (subscribe [:ui-state :section])]
@@ -176,8 +176,8 @@
           :export "Export your Relevance data"
           :settings "Settings"
           :import "Import a Relevance backup"
-          "")
-        ]])))
+          "")]])))
+
 
 ;; We could actually move modal-confirm to a component namespace, parametrize it.
 (defn modal-confirm []
@@ -198,8 +198,8 @@
                   :on-click #(dispatch [:modal-info-set nil])} "Cancel"]
         [:button {:type     "submit"
                   :class    "btn btn-primary"
-                  :on-click (:action @modal-info)} (:action-label @modal-info)]
-        ]])))
+                  :on-click (:action @modal-info)} (:action-label @modal-info)]]])))
+
 
 (defn list-urls [urls site-data]
   (let [now (.now js/Date)]
@@ -223,9 +223,9 @@
                         (< age-ms (* 3 ms-day)) "#009900"
                         (< age-ms (* 7 ms-day)) "#ff8000"
                         (< age-ms (* 14 ms-day)) "#cc6600"
-                        :else "#994c00"
-                        )
-              ]
+                        :else "#994c00")]
+
+
           ^{:key i}
           [:tr {:class "has_on_hover"}
            [:td {:class "col-sm-1"}
@@ -245,8 +245,8 @@
              [:i {:class    "fa fa-remove"
                   :style    {:color "red"}
                   :on-click #(runtime/send-message {:action :delete-url
-                                                    :data   url})}]]]
-           ]))
+                                                    :data   url})}]]]]))
+
       urls)))
 
 
@@ -268,8 +268,8 @@
        [:p "If you wish to delete an item, hover the mouse over the listing. You'll see a "
         [:i {:class    "fa fa-remove"
              :style    {:color "red"}}]
-        " appear besides the last visit time. Click it to remove the row."
-        ]
+        " appear besides the last visit time. Click it to remove the row."]
+
        [:p "Total: " @total " URLs."]
        (when (< per-page @total)
          [Pagination
@@ -280,8 +280,8 @@
            :last       true
            :ellipsis   true
            :maxButtons 20
-           :onSelect   #(dispatch [:app-state-item [:ui-state :url-page] (dec (aget %2 "eventKey"))])}
-          ])
+           :onSelect   #(dispatch [:app-state-item [:ui-state :url-page] (dec (aget %2 "eventKey"))])}])
+
        [:div {:class "card"}
         [:div {:class "content table-responsive table-full-width"}
          [:table {:class "table table-striped table-hover"}
@@ -291,10 +291,10 @@
             [:th "Title"]
             [:th "Last visit"]]]
           [:tbody
-           (list-urls @list-shown @site-times)
-           ]]]]
-       ])
-    ))
+           (list-urls @list-shown @site-times)]]]]])))
+
+
+
 
 (defn div-sitetimes []
   (let [site-times (subscribe [:data :site-times])
@@ -323,11 +323,11 @@
                                              [:img {:src    icon
                                                     :width  16
                                                     :height 16}])
-                   url]
-                  ]))
-             @to-list)]
-          ]]]])
-    ))
+                   url]]))
+
+             @to-list)]]]]])))
+
+
 
 (defn div-intro []
   [:div
@@ -342,8 +342,8 @@
      [:li "When you have too many tabs open on a window and need to organize them, click on the Relevance button on the browser bar."]
      [:li "If you want to see your own data, right click on the Relevance button and select "
       [:i "Show Relevance Data"] "."]]
-    [:p "That's it! Enjoy!"]
-    ]
+    [:p "That's it! Enjoy!"]]
+
    [:div {:class "col-sm-10 col-sm-offset-1"}
     [:h2 "About Relevance"]
     [:p "Relevance is a smart tab organizer. It’s nonintrusive and fully private. When you activate it your tabs are sorted based on the duration you are actively viewing it combined with the total time you actively browse pages on that domain. It will allow you to discover greater insights about your browsing habits."]
@@ -351,8 +351,8 @@
     [:p "This creates a natural arrangement where the tabs you have spent the longest on, which are expected to be the most relevant, are placed first, and the ones you haven't read at all are shunted to the end."]
     [:p "I'm a tab-aholic. I normally do a search, start opening the tabs that seem interesting, and then as I flip through them, I end up opening even more links on tabs as they seem relevant."]
     [:p "Next thing I know I have a huge mess of tabs, and it's hard to remember which one I've read, or which one is more relevant."]
-    [:p "I wrote Relevance to help manage that. I've found it very useful in organizing what I should be focusing on, and I hope it'l be useful for you as well."]
-    ]
+    [:p "I wrote Relevance to help manage that. I've found it very useful in organizing what I should be focusing on, and I hope it'l be useful for you as well."]]
+
    [:div {:class "col-sm-10 col-sm-offset-1"}
     [:h2 "Adaptive arrangements"]
     [:p
@@ -361,8 +361,8 @@
     [:p
      "If you want to fine-tune which sites Relevance prioritizes, you can go to the "
      [:i "Settings"]
-     " page and add domains that Relevance should ignore when recording your habits."]
-    ]
+     " page and add domains that Relevance should ignore when recording your habits."]]
+
    [:div {:class "col-sm-10 col-sm-offset-1"}
     [:h2 "Notes and comments"]
     [:p "I'm actively developing Relevance, and I'll be happy to hear your comments. If you have any suggestions on what you think might make Relevance better, "
@@ -377,9 +377,9 @@
     [:p "This version of Relevance has an experimental integration with "
      [:a {:href "https://startpage.com" :target "_blank"} "StartPage"]
      ". After you run a search, it'll look at the results on your current page and re-prioritize the links shown to bring to the front those you have spent the longest reading."]
-    [:p "Every search engine behaves differently, so if there's enough interest, I could extend this integration to others as well."]]
-   ]
-  )
+    [:p "Every search engine behaves differently, so if there's enough interest, I could extend this integration to others as well."]]])
+
+
 
 
 (defn data-export []
@@ -391,9 +391,9 @@
        [:textarea {:class     "form-control"
                    :rows      30
                    :read-only true
-                   :value     @data}
-        ]
-       ])))
+                   :value     @data}]])))
+
+
 
 
 (defn data-import []
@@ -408,40 +408,40 @@
         [:textarea {:class     "form-control"
                     :rows      30
                     :value     @import-data
-                    :on-change #(reset! import-data (-> % .-target .-value))}]
-        ]
+                    :on-change #(reset! import-data (-> % .-target .-value))}]]
+
 
        [:div {:class "row"}
         [:a {:class    "btn btn-primary btn-sm"
-             :on-click #(dispatch [:data-import @import-data])} "Import"]
-        ]
-       ])))
+             :on-click #(dispatch [:data-import @import-data])} "Import"]]])))
+
+
 
 (defn div-settings []
   (let [ignore-set     (subscribe [:settings :ignore-set])
         sound-to-left? (subscribe [:settings :sound-to-left?])
         our-ignore     (reagent/atom (string/join "\n" (sort @ignore-set)))
-        our-sound      (reagent/atom @sound-to-left?)
-        ]
+        our-sound      (reagent/atom @sound-to-left?)]
+
     (fn []
       (console/log @sound-to-left? @our-sound)
       [:div {:class "col-sm-12"}
        [:div {:class "row"}
         [:div {:class "col-sm-12"}
-         [:h3 "Ignore domains"]
-         ]
+         [:h3 "Ignore domains"]]
+
         [:div {:class "col-sm-6"}
          [:p "Type below the domains that you want ignore, one per line."]
          [:textarea {:class     "form-control"
                      :value     @our-ignore
                      :rows      10
-                     :on-change #(reset! our-ignore (-> % .-target .-value))}
-          ]
-         ]
+                     :on-change #(reset! our-ignore (-> % .-target .-value))}]]
+
+
         [:div {:class "col-sm-6"}
-         [:p {:class "alert alert-info"} [:strong "Heads up! "] "Adding a domain to the ignore list will remove the data Relevance currently has for it."]
-         ]
-        ]
+         [:p {:class "alert alert-info"} [:strong "Heads up! "] "Adding a domain to the ignore list will remove the data Relevance currently has for it."]]]
+
+
        [:div {:class "row"}
         [:div {:class "col-sm-12"}
          [:h3 "Prioritize tabs with sound?"]]
@@ -450,20 +450,20 @@
           [:input {:type      :checkbox
                    :checked   @our-sound
                    :on-change #(reset! our-sound (-> % .-target .-checked))
-                   :style     {:margin-right "4px"}
-                   }]
-          "If selected, tabs with sound will be prioritized, and moved to the left when sorting."]
-         ]
-        [:div {:class "col-sm-6"}]
+                   :style     {:margin-right "4px"}}]
 
-        ]
+          "If selected, tabs with sound will be prioritized, and moved to the left when sorting."]]
+
+        [:div {:class "col-sm-6"}]]
+
+
        [:div {:class "row"}
         [:div {:class "col-sm-12"}
          [:a {:class    "btn btn-danger btn-sm"
               :on-click #(dispatch [:settings-parse {:ignore-set     @our-ignore
-                                                     :sound-to-left? @our-sound}])} "Save settings"]]
-        ]
-       ])))
+                                                     :sound-to-left? @our-sound}])} "Save settings"]]]])))
+
+
 
 
 (def component-dir {:export     data-export

@@ -109,8 +109,8 @@
         total         (+ tab-time site-time)
         is-penalized? (and (not (is-http? url))
                            (not is-priority?))
-        score         (if is-penalized? (* total non-http-penalty) total)
-        ]
+        score         (if is-penalized? (* total non-http-penalty) total)]
+
     (or (when tab-time score)
         (- idx))))
 
@@ -124,8 +124,8 @@
                     (map-indexed #(hash-map :index %1
                                             :id (:id %2))))]
       (doseq [tab tabs]
-        (tabs/move (:id tab) {:index (:index tab)}))
-      )))
+        (tabs/move (:id tab) {:index (:index tab)})))))
+
 
 
 ;;;;-------------------------------------
@@ -147,9 +147,9 @@
             last-shown (:last-initialized (<! (storage/get :last-initialized)))]
         (when (not= version last-shown)
           (open-results-tab)
-          (storage/set {:last-initialized version}))
-        )
-      )
+          (storage/set {:last-initialized version}))))
+
+
     {:app-state {}}))
 
 
@@ -190,8 +190,8 @@
           (dispatch [:handle-activation old-tab (:start-time old-tab)])
           (dispatch [:handle-deactivation old-tab (:time suspend-info)])))
       (assoc app-state :data (dissoc new-data :suspend-info)
-                       :settings settings)
-      )))
+                       :settings settings))))
+
 
 
 (register-handler
@@ -199,8 +199,8 @@
   (fn [app-state [_ key item]]
     (let [new-state (assoc-in app-state [:data key] item)]
       (io/save :data (:data new-state))
-      new-state)
-    ))
+      new-state)))
+
 
 (register-handler
   :delete-url
@@ -212,12 +212,12 @@
           new-data  (if changed?
                       (assoc data :url-times new-times
                                   :site-times (accumulate-preserve-icons new-times (:site-times data)))
-                      data)
-          ]
+                      data)]
+
       (when changed?
         (io/save :data new-data))
-      (assoc app-state :data new-data)
-      )))
+      (assoc app-state :data new-data))))
+
 
 (register-handler
   :handle-activation
@@ -253,8 +253,8 @@
           action     (if (= "active" state) :handle-activation :handle-deactivation)
           active-tab (if (= :handle-activation action)
                        (get-in app-state [:app-state :idle])
-                       (:active-tab app-state))
-          ]
+                       (:active-tab app-state))]
+
       ; (console/trace " State changed to " state action)
       ;; We only store the idle tabs on the app state if we actually idled any.
       ;; That way we avoid losing the originally stored idled tabs when we
@@ -267,8 +267,8 @@
           (-> app-state
               (assoc-in [:app-state :idle] active-tab)
               (assoc :active-tab nil)))
-        app-state)
-      )))
+        app-state))))
+
 
 
 (register-handler
@@ -276,8 +276,8 @@
   (fn [app-state [_ {:keys [alarm]}]]
     (when (= window-alarm (:name alarm))
       (check-window-status (:active-tab app-state)))
-    app-state
-    ))
+    app-state))
+
 
 (register-handler
   ::on-clicked-button
@@ -287,15 +287,15 @@
       (dispatch [:handle-deactivation active-tab])
       (dispatch [:handle-activation active-tab]))
     (dispatch [:on-relevance-sort-tabs tab])
-    app-state
-    ))
+    app-state))
+
 
 (register-handler
   ::on-clicked-menu
   (fn [app-state [_ {:keys [info tab]}]]
     (dispatch [(keyword (:menuItemId info)) tab])
-    app-state
-    ))
+    app-state))
+
 
 (register-handler
   ::on-message
@@ -306,11 +306,11 @@
       (condp = (keyword action)
         :reload-data (go (dispatch [:data-load (<! (io/load :data)) (<! (io/load :settings))]))
         :delete-url (dispatch [:delete-url data])
-        (console/error "Nothing matched" message)
-        )
-      )
-    app-state
-    ))
+        (console/error "Nothing matched" message)))
+
+
+    app-state))
+
 
 
 (register-handler
@@ -346,9 +346,9 @@
         (do
           (dispatch [:handle-deactivation active-tab])
           (go (dispatch [:handle-activation (<! (tabs/get tabId))]))
-          (assoc app-state :active-tab nil))                          ; :handle-activation is responsible for setting it
-        app-state
-        ))))
+          (assoc app-state :active-tab nil))                ; :handle-activation is responsible for setting it
+        app-state))))
+
 
 
 (register-handler
@@ -370,8 +370,8 @@
       ;; the URL change condition above).
       (if are-same?
         (assoc app-state :active-tab (merge active-tab (select-keys tab [:title :url])))
-        app-state)
-      )))
+        app-state))))
+
 
 
 (register-handler
@@ -383,8 +383,8 @@
           new-data   (assoc data :url-times url-times :site-times site-times)]
       ; (console/trace time " milliseconds spent at " tab)
       (io/save :data new-data)
-      (assoc app-state :data new-data)
-      )))
+      (assoc app-state :data new-data))))
+
 
 (register-handler
   ::window-focus
@@ -403,8 +403,8 @@
             (go (dispatch [:handle-activation
                            (first (<! (tabs/query {:active true :windowId windowId})))])))
           (assoc app-state :active-tab nil))
-        app-state))
-    ))
+        app-state))))
+
 
 
 ;;;;-------------------------------------
@@ -419,8 +419,8 @@
     (let [content (<! connections)]
       ; (console/log "--> Background received" (<! content))
       (>! content :background-ack)
-      (recur connections)))
-  )
+      (recur connections))))
+
 
 
 (defn ^:export main []

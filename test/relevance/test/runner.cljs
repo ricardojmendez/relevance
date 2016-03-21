@@ -2,8 +2,8 @@
   (:require [doo.runner :refer-macros [doo-tests]]
             [relevance.test.data]
             [relevance.test.migrations]
-            [relevance.test.utils]
-            ))
+            [relevance.test.utils]))
+
 
 
 (enable-console-print!)

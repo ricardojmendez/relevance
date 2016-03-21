@@ -105,5 +105,4 @@
       (< seconds 60) (str seconds "s")
       (< seconds 3600) (time-label (quot seconds 60) "m" (rem seconds 60) "s")
       (< seconds 86400) (time-label (quot seconds 3600) "h" (quot (rem seconds 3600) 60) "m")
-      :else (time-label (quot seconds 86400) "d" (quot (rem seconds 86400) 3600) "h")))
-  )
+      :else (time-label (quot seconds 86400) "d" (quot (rem seconds 86400) 3600) "h"))))
