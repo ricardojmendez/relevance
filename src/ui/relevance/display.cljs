@@ -98,7 +98,6 @@
 (register-handler
   :settings-parse
   (fn [app-state [_ settings]]
-    (console/log settings)
     (let [ignore-set (utils/to-string-set (:ignore-set settings))]
       (dispatch [:settings-set {:ignore-set     ignore-set
                                 :sound-to-left? (:sound-to-left? settings)} true])
@@ -424,7 +423,6 @@
         our-sound      (reagent/atom @sound-to-left?)]
 
     (fn []
-      (console/log @sound-to-left? @our-sound)
       [:div {:class "col-sm-12"}
        [:div {:class "row"}
         [:div {:class "col-sm-12"}

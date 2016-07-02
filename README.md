@@ -43,4 +43,6 @@ lein with-profile test doo phantom
 
 # License
 
+Includes pixeden's [iOS 7 vector icons](http://themes-pixeden.com/font-demos/7-stroke/).
+
 Relevance is (c) 2016 Numergent Limited, and released under the [MIT License](https://tldrlegal.com/license/mit-license).
