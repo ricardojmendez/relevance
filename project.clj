@@ -5,7 +5,7 @@
                  [org.clojure/clojurescript "1.9.93"]
                  [org.clojure/core.async "0.2.385"]
                  [com.cognitect/transit-cljs "0.8.239"]
-                 [cljsjs/react-bootstrap "0.29.5-0" :exclusions [org.webjars.bower/jquery]]
+                 [cljsjs/react-bootstrap "0.28.1-1" :exclusions [org.webjars.bower/jquery]]
                  [khroma "0.3.0"]
                  [prismatic/dommy "1.1.0"]
                  [re-frame "0.7.0" :exclusions [cljsjs/react]]]
