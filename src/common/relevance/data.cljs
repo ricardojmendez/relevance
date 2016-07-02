@@ -12,11 +12,11 @@
     (map #(vector (host-key (key %))
                   (hash-map :host (key %)
                             :time (apply + (map :time (val %)))
-                            :icon (:icon (first (val %))))
-                  ))
-    (into {})
-    )
-  )
+                            :icon (:icon (first (val %))))))
+
+    (into {})))
+
+
 
 
 (defn clean-up-by-time
@@ -33,8 +33,8 @@
   matches an ignore set"
   [url-times ignore-set]
   (into {} (remove #(contains? ignore-set (hostname (:url (val %))))
-                   url-times))
-  )
+                   url-times)))
+
 
 (defn track-url-time
   "Receives a url time database, a tab record and a time to track, and returns

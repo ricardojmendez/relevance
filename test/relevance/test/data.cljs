@@ -1,8 +1,8 @@
 (ns relevance.test.data
   (:require [cljs.test :refer-macros [deftest testing is are]]
             [relevance.data :as data]
-            [relevance.utils :as utils]
-            ))
+            [relevance.utils :as utils]))
+
 
 ;; IMPORTANT: READ THIS BEFORE YOU START MODIFYING THESE TESTS
 ;;
@@ -43,8 +43,8 @@
                   {:url   "http://www.kitco.com/market/"
                    :time  4
                    :ts    1446051494575
-                   :title "New York spot price Gold..."
-                   }
+                   :title "New York spot price Gold..."}
+
                   ;; The next two items are used for pruning tests. Notice that
                   ;; prismatic has less time than splunk but was accessed later.
                   ;; Changing those values would break the tests.
@@ -52,15 +52,15 @@
                   {:url   "http://getprismatic.com/oauth-complete?result=login"
                    :time  3
                    :ts    1446114615912
-                   :title "Prismatic login"
+                   :title "Prismatic login"}
 
-                   }
+
                   1038158073
                   {:url   "http://splunk.com/"
                    :time  29
                    :ts    1446028215912
-                   :title "Splunk"
-                   }}
+                   :title "Splunk"}}
+
    :site-times   {971841386   {:icon "http://numergent.com/favicon.ico"
                                :time 144
                                :host "numergent.com"}
@@ -119,9 +119,9 @@
       (is (= ts (:ts item)) "Item should have been time-stamped")
       (is (= 29 (:time item)) "Time should have increased")
       (doseq [other (dissoc result id)]
-        (is (= (val other) (get (:url-times test-db) (key other))) "Other items should have remained untouched")
-        )
-      ))
+        (is (= (val other) (get (:url-times test-db) (key other))) "Other items should have remained untouched"))))
+
+
   (testing "Add time to a new tab"
     (let [tab     {:url        "http://numergent.com/"
                    :title      "Numergent limited"
@@ -140,9 +140,9 @@
       (is (= ts (:ts item)) "Item should have been time-stamped")
       (is (= 9 (:time item)) "Time should have been assigned")
       (doseq [other (dissoc result tab-key)]
-        (is (= (val other) (get (:url-times test-db) (key other))) "Other items should have remained untouched")
-        )
-      ))
+        (is (= (val other) (get (:url-times test-db) (key other))) "Other items should have remained untouched"))))
+
+
   (testing "Add zero seconds"
     (let [tab     {:url   "http://numergent.com/about/"
                    :title "About Numergent"}
@@ -156,9 +156,9 @@
       (is result)
       (is (nil? item) "We should not have an item with that URL")
       (is (= 7 (count result)) "We should not have added any elements")
-      (is (= result (:url-times test-db)))
+      (is (= result (:url-times test-db)))))
 
-      ))
+
   (testing "Non-http URLs aren't tracked"
     (let [tab     {:url   "file:///Users/my-user/the-file.html"
                    :title "Numergent limited"}
@@ -172,8 +172,8 @@
       (is result)
       (is (= 7 (count result)) "We shouldn't have added an element")
       (is (nil? item) "We should not have the URL on our list")
-      (is (= result (:url-times test-db)) "Database should not have been altered")
-      ))
+      (is (= result (:url-times test-db)) "Database should not have been altered")))
+
   (testing "Add time to a new tab on an empty set"
     (let [tab     {:url        "http://numergent.com/"
                    :title      "Numergent limited"
@@ -198,8 +198,8 @@
     (let [tab    {:url ""}
           ts     12345
           result (data/track-url-time (:url-times test-db) tab 9 ts)]
-      (is (= result (:url-times test-db)))
-      ))
+      (is (= result (:url-times test-db)))))
+
   (testing "Attempting to add time to an ignored URL causes no changes"
     ;; Repeating almost the exact same test as when we tracked the time for
     ;; Numergent, only passing it as an ignore domain now.
@@ -217,10 +217,10 @@
       (is (nil? item))
       (is (= with-ignore (:url-times test-db)) "URL times should not have been altered")
       (is (not= with-ignore no-ignore) "Removing the domain from the ignore list should result on the element being added")
-      (is (= (count no-ignore) (inc (count with-ignore))) "Result without ignoring the element should have one more value")
-      )
-    )
-  )
+      (is (= (count no-ignore) (inc (count with-ignore))) "Result without ignoring the element should have one more value"))))
+
+
+
 
 
 (deftest test-track-site-time
@@ -245,9 +245,9 @@
                              1234 (:time item))
       ;; Let's make sure we did not break anything while adding an ignore parameter
       (is (= result (data/track-site-time {} tab 1234 ts :ignore-set #{"localhost" "newtab"}))
-          "The result should be the same even if we pass an ignore-set")
-      )
-    )
+          "The result should be the same even if we pass an ignore-set")))
+
+
   (testing "Add time to an existing database for an existing site"
     (let [tab    {:url        "http://numergent.com/opensource/index.html"
                   :title      "Further open source project details"
@@ -268,13 +268,13 @@
                              ts (:ts item)
                              147 (:time item))
       (doseq [other (dissoc result id)]
-        (is (= (val other) (get (:site-times test-db) (key other))) "Other items should have remained untouched")
-        )
+        (is (= (val other) (get (:site-times test-db) (key other))) "Other items should have remained untouched"))
+
       ;; Let's make sure we did not break anything while adding an ignore parameter
       (is (= result (data/track-site-time (:site-times test-db) tab 3 ts
                                           :ignore-set #{"localhost" "newtab"}))
-          "The result should be the same even if we pass an ignore-set")
-      ))
+          "The result should be the same even if we pass an ignore-set")))
+
   (testing "Add time to an existing database for a new site"
     (let [tab    {:url        "https://twitter.com/ArgesRic"
                   :title      "ArgesRic"
@@ -295,15 +295,15 @@
                              ts (:ts item)
                              9 (:time item))
       (doseq [other (dissoc result id)]
-        (is (= (val other) (get (:site-times test-db) (key other))) "Other items should have remained untouched")
-        )
+        (is (= (val other) (get (:site-times test-db) (key other))) "Other items should have remained untouched"))
+
       ;; Then, let's make sure we did not break anything while adding an ignore parameter
       (is (= result
              (data/track-site-time (:site-times test-db) tab 9 ts
-                                   :ignore-set #{"localhost" "somedomain.com"})))
-      )
+                                   :ignore-set #{"localhost" "somedomain.com"})))))
 
-    )
+
+
   (testing "Add zero time should not result on any changes"
     (let [tab    {:url        "https://twitter.com/ArgesRic"
                   :title      "ArgesRic"
@@ -317,8 +317,8 @@
           item   (get result id)]
       (is result)
       (is (= result (:site-times test-db)))
-      (is (nil? item)))
-    )
+      (is (nil? item))))
+
   (testing "Add time from an invalid tab does not change the databse"
     (let [tab    {}
           ts     1445964037920
@@ -349,8 +349,8 @@
                              (:favIconUrl tab) (:icon item)
                              "numergent.com" (:host item)
                              ts (:ts item)
-                             147 (:time item))))
-  )
+                             147 (:time item)))))
+
 
 
 (deftest test-clean-up-by-time
@@ -363,8 +363,8 @@
       (is (nil? (get pruned (utils/url-key "http://splunk.com/"))))
       (is (nil? (get pruned (utils/url-key "http://numergent.com/opensource/"))))
       ;; The very briefly accessed prismatic login remains because of its timestamp
-      (is (get pruned (utils/url-key "http://getprismatic.com/oauth-complete?result=login")))
-      ))
+      (is (get pruned (utils/url-key "http://getprismatic.com/oauth-complete?result=login")))))
+
   (testing "Timestamp filtering is only on strictly greater than"
     (let [min-date 1446114615912
           pruned   (data/clean-up-by-time (:url-times test-db) min-date 30)]
@@ -374,8 +374,8 @@
       (is (get pruned (utils/url-key "http://getprismatic.com/oauth-complete?result=login")))
       ;; ... as are all the keys we should have
       (is (= #{-327774960 -327358142 1609181525}
-             (into #{} (keys pruned))))
-      ))
+             (into #{} (keys pruned))))))
+
   (testing "Cut-off seconds are respected when filtering"
     (let [min-date 1446114615912
           pruned   (data/clean-up-by-time (:url-times test-db) min-date 28)]
@@ -390,8 +390,8 @@
       (is pruned)
       (is (= 2 (count pruned)))
       (is (= #{-327774960 -327358142}
-             (into #{} (keys pruned)))))
-    ))
+             (into #{} (keys pruned)))))))
+
 
 (deftest test-clean-up-ignored
   (let [url-times (:url-times test-db)]
@@ -410,8 +410,8 @@
     (let [result (data/clean-up-ignored url-times #{"localhost" "getprismatic.com" "numergent.com"})]
       (is (= result (dissoc url-times -327774960 -526558523 1609181525))
           "We should have removed the numergent-associated urls")
-      (is (= 4 (count result))))
-    ))
+      (is (= 4 (count result))))))
+
 
 
 (deftest test-accumulate-site-times
@@ -439,17 +439,17 @@
                 {:url   "http://www.kitco.com/market/"
                  :time  4
                  :ts    1446051494575
-                 :title "New York spot price Gold..."
-                 }}
+                 :title "New York spot price Gold..."}}
+
           acc  (data/accumulate-site-times data)]
       ;; There should be no empty hostnames
       (is (nil? (get acc 0)))
       ;; Let' verify we got the right data
       (is (= {971841386  {:time 39, :icon nil, :host "numergent.com"},
               -915908674 {:time 4, :icon nil, :host "www.kitco.com"}}
-             acc))
-      ))
-  )
+             acc)))))
+
+
 
 
 (deftest test-accumulate-after-clean-up
@@ -467,5 +467,4 @@
               1366860619 {:icon nil
                           :time 3
                           :host "getprismatic.com"}}
-             site-times))
-      )))
+             site-times)))))

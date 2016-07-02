@@ -1,22 +1,22 @@
-(defproject relevance-chrome "1.0.5"
+(defproject relevance-chrome "1.0.6"
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.clojure/clojurescript "1.7.228"]
+                 [org.clojure/clojurescript "1.8.34"]
                  [org.clojure/core.async "0.2.374"]
                  [com.cognitect/transit-cljs "0.8.237"]
                  [cljsjs/react-bootstrap "0.28.1-1" :exclusions [org.webjars.bower/jquery]]
                  [khroma "0.3.0"]
                  [prismatic/dommy "1.1.0"]
-                 [re-frame "0.6.0" :exclusions [cljsjs/react]]
-                 ]
+                 [re-frame "0.7.0" :exclusions [cljsjs/react]]]
+
   :source-paths ["src/ui" "src/common" "src/background" "src/content"]
   :test-paths ["test"]
 
   :plugins [[lein-cljsbuild "1.1.1"]
             [lein-chromebuild "0.3.1"]
-            [lein-doo "0.1.6-SNAPSHOT"]
-            ]
+            [lein-doo "0.1.6-SNAPSHOT"]]
+
 
   :doo {:build "test"}
 
@@ -41,9 +41,9 @@
                                :output-dir    "target/js/ui"
                                :main          "relevance.display"
                                :optimizations :whitespace
-                               :pretty-print  true}}
-               }
-              }
+                               :pretty-print  true}}}}
+
+
   :chromebuild {:resource-paths   ["resources/js"
                                    "resources/dashboard"
                                    "resources/images"
@@ -70,6 +70,6 @@
                                               :output-dir    "target/js/test"
                                               :main          relevance.test.runner
                                               :optimizations :none
-                                              :pretty-print  :true}}}}
-              }
-             })
+                                              :pretty-print  :true}}}}}})
+
+

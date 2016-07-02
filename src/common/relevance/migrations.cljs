@@ -34,10 +34,10 @@
         (assoc data
           :data-version 3
           :url-times url-times
-          :site-times (accumulate-site-times url-times))
-        )
-    data
-    ))
+          :site-times (accumulate-site-times url-times)))
+
+    data))
+
 
 
 (defn migrate-to-latest
