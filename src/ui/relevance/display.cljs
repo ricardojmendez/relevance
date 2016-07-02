@@ -228,9 +228,9 @@
 
           ^{:key i}
           [:tr {:class "has_on_hover"}
-           [:td {:class "col-sm-1"}
+           [:td {:class "col-sm-2"}
             (time-display (:time tab))]
-           [:td {:class "col-sm-9"}
+           [:td {:class "col-sm-8"}
             [:a
              {:href url :target "_blank"}
              (if favicon
