@@ -1,11 +1,8 @@
 (ns relevance.test.order
   (:require [cljs.test :refer-macros [deftest testing is are]]
-            [relevance.data :as data]
             [relevance.order :as order]
             [relevance.utils :as utils]))
 
-(deftest empty-test
-  (is (= 1 1)))
 
 (deftest test-time-score
   ; A score for an unknown URL with no tab index is zero
@@ -39,15 +36,15 @@
                                {(utils/host-key "google.com") {:time 123}
                                 (utils/host-key "apple.com")  {:time 987}}
                                {})))
-  ; A page inherits its site's score even if it's unknown
+  ; A page inherits its site's score even if the page is unknown
   (is (= 987 (order/time-score {:url "http://apple.com/mac"}
                                {(utils/url-key "http://google.com")          {:time 291}
                                 (utils/url-key "http://google.com/somepage") {:time 345}}
                                {(utils/host-key "google.com") {:time 123}
                                 (utils/host-key "apple.com")  {:time 987}}
                                {})))
-  ; A page inherits its site's score even if it's unknown, but substracts the index so
-  ; that they are placed at the end.
+  ; A page inherits its site's score even if the page is unknown, but
+  ; substracts the index so that they are placed at the end.
   (is (= 975 (order/time-score {:url "http://apple.com/mac" :index 12}
                                {(utils/url-key "http://google.com")          {:time 291}
                                 (utils/url-key "http://google.com/somepage") {:time 345}}
@@ -81,6 +78,7 @@
                            {(utils/host-key "google.com") {:time 123}
                             (utils/host-key "apple.com")  {:time 987}}
                            {}))))
+
 
 (deftest test-score-tabs
   (let [url-times  {(utils/url-key "http://google.com")          {:time 2910}
@@ -173,16 +171,5 @@
                              url-times
                              site-times
                              {})))
-
     )
   )
-
-
-
-
-
-
-
-
-
-

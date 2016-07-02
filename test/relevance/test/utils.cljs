@@ -1,7 +1,6 @@
 (ns relevance.test.utils
   (:require [cljs.test :refer-macros [deftest testing is are]]
-            [relevance.utils :as utils]
-            ))
+            [relevance.utils :as utils]))
 
 
 (deftest test-key-from-url
@@ -16,16 +15,16 @@
       "Key should disregard trailing hashtags")
   (is (= (utils/url-key "https://LOCALHOST")
          (utils/url-key "https://localhost"))
-      "Key is not case-sensitive")
+      "Key should not consider the domain case-sensitive")
   (is (= (utils/url-key "https://LOCALHOST/someUrl#hash")
          (hash-string "localhost/someUrl"))
-      "Our hash calculations are consistent with hash-string")
+      "Our hash calculations should be consistent with hash-string")
   (is (not= (utils/url-key "https://localhost?q=v")
             (utils/url-key "https://localhost?q="))
       "Key should respect query strings")
   (is (not= (utils/url-key "https://localhost.com/path")
             (utils/url-key "https://localhost.com/Path"))
-      "Path is case-sensitive")
+      "url-key should consider the path case-sensitive")
   ;; Let's confirm we actually return a consistent integer for some known values
   (are [k url] (= k (utils/url-key url))
                -20650657 "https://LOCALHOST/someUrl#hash"
@@ -41,6 +40,7 @@
                -847465478 "file:///Users/ricardo/Sources/user.html"
                ))
 
+
 (deftest test-host-key
   (are [k url] (= k (utils/host-key url))
                -702889725 "www.google.com"
@@ -49,8 +49,8 @@
                -292940973 "www.numergent.com"
                0 ""
                0 "   "
-               0 nil)
-  )
+               0 nil))
+
 
 (deftest test-time-display
   (are [time label] (= (utils/time-display time) label)
@@ -74,13 +74,13 @@
                     248996 "2d 21h"
                     ))
 
-(deftest test-host
+(deftest test-hostname
   (are [url name] (= (utils/hostname url) name)
                   "https://www.google.com/some?q=v" "www.google.com"
                   "https://www.Google.com/some?q=v" "www.google.com"
                   "https://WWW.GOOGLE.COM/some?q=v" "www.google.com"
                   "http://WWW.GOOGLE.COM/some?q=v" "www.google.com"
-                  "https://GOOGLE.COM:443/some?q=v" "google.com"
+                  "https://GOOGLE.COM:443/some?q=v" "google.com"      ; host would have included the port
                   "https://GOOGLE.COM:3000/some?q=v" "google.com"     ; host would have included the port
                   "http://numergent.com/tag/khroma" "numergent.com"
                   "about:blank" ""

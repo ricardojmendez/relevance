@@ -16,7 +16,6 @@
                   (hash-map :host (key %)
                             :time (apply + (map :time (val %)))
                             :icon (:icon (first (val %))))))
-
     (into {})))
 
 
