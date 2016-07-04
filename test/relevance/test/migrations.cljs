@@ -112,7 +112,7 @@
                      (assoc :time (quot (:time in-v2) 1000))
                      (rename-keys {:icon :icon}))
                )))
-      ;; Test recurrent migration
+      ;; Test applying all possible migrations iteratively
       (is (= v3 (migrations/migrate-to-latest base-data)) "Migrating all the way to the latest should yield the same v2 data")
       (is (= v3 (migrations/migrate-to-latest v1)) "Migrating all the way to the latest should yield the same v2 data")
       (is (not= base-data (migrations/migrate-to-latest base-data)) "Migration loop should have returned a different data set")

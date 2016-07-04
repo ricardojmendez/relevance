@@ -98,7 +98,6 @@
 (register-handler
   :settings-parse
   (fn [app-state [_ settings]]
-    (console/log settings)
     (let [ignore-set (utils/to-string-set (:ignore-set settings))]
       (dispatch [:settings-set {:ignore-set     ignore-set
                                 :sound-to-left? (:sound-to-left? settings)} true])
@@ -228,9 +227,9 @@
 
           ^{:key i}
           [:tr {:class "has_on_hover"}
-           [:td {:class "col-sm-1"}
+           [:td {:class "col-sm-2"}
             (time-display (:time tab))]
-           [:td {:class "col-sm-9"}
+           [:td {:class "col-sm-8"}
             [:a
              {:href url :target "_blank"}
              (if favicon
@@ -334,7 +333,7 @@
    [:div {:class "page-header col-sm-10 col-sm-offset-1"}
     [:h1 "Welcome!"]]
    [:div {:class "col-sm-10 col-sm-offset-1"}
-    [:h2 "Thanks for installing Relevance 1.0.6"]
+    [:h2 "Thanks for installing Relevance 1.0.7"]
     [:p [:a {:href "http://numergent.com/relevance/" :target "_blank"} "You can read about the latest changes here."]]
     [:p "Relevance will help you sort your tabs when you have too many of them open. Here's how to use it:"]
     [:ul
@@ -424,7 +423,6 @@
         our-sound      (reagent/atom @sound-to-left?)]
 
     (fn []
-      (console/log @sound-to-left? @our-sound)
       [:div {:class "col-sm-12"}
        [:div {:class "row"}
         [:div {:class "col-sm-12"}

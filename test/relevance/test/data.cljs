@@ -270,7 +270,7 @@
       (doseq [other (dissoc result id)]
         (is (= (val other) (get (:site-times test-db) (key other))) "Other items should have remained untouched"))
 
-      ;; Let's make sure we did not break anything while adding an ignore parameter
+      ;; Let's make sure we did not break anything while adding an ignore-set parameter
       (is (= result (data/track-site-time (:site-times test-db) tab 3 ts
                                           :ignore-set #{"localhost" "newtab"}))
           "The result should be the same even if we pass an ignore-set")))
@@ -297,11 +297,11 @@
       (doseq [other (dissoc result id)]
         (is (= (val other) (get (:site-times test-db) (key other))) "Other items should have remained untouched"))
 
-      ;; Then, let's make sure we did not break anything while adding an ignore parameter
+      ;; Then, let's make sure we did not break anything while adding an ignore-set parameter
       (is (= result
              (data/track-site-time (:site-times test-db) tab 9 ts
-                                   :ignore-set #{"localhost" "somedomain.com"})))))
-
+                                   :ignore-set #{"localhost" "somedomain.com"}))
+          "The result should be the same even if we pass an ignore-set")))
 
 
   (testing "Add zero time should not result on any changes"
@@ -319,7 +319,7 @@
       (is (= result (:site-times test-db)))
       (is (nil? item))))
 
-  (testing "Add time from an invalid tab does not change the databse"
+  (testing "Add time for an invalid tab does not change the databse"
     (let [tab    {}
           ts     1445964037920
           result (data/track-site-time (:site-times test-db)
@@ -350,7 +350,6 @@
                              "numergent.com" (:host item)
                              ts (:ts item)
                              147 (:time item)))))
-
 
 
 (deftest test-clean-up-by-time
@@ -413,7 +412,6 @@
       (is (= 4 (count result))))))
 
 
-
 (deftest test-accumulate-site-times
   (testing "Accumulate site times creates a total but doesn't add favicons"
     (is (= (into {} (map #(vector (key %) (assoc (val %) :icon nil))
@@ -440,16 +438,15 @@
                  :time  4
                  :ts    1446051494575
                  :title "New York spot price Gold..."}}
-
           acc  (data/accumulate-site-times data)]
-      ;; There should be no empty hostnames
+      ; There should be no empty hostnames
+      ; We check (get acc 0) because the result is indexed by the host-key,
+      ; which returns 0 on nil or empty.
       (is (nil? (get acc 0)))
-      ;; Let' verify we got the right data
+      ;; Let's verify we got the right data
       (is (= {971841386  {:time 39, :icon nil, :host "numergent.com"},
               -915908674 {:time 4, :icon nil, :host "www.kitco.com"}}
              acc)))))
-
-
 
 
 (deftest test-accumulate-after-clean-up

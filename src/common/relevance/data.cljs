@@ -4,7 +4,10 @@
 
 
 (defn accumulate-site-times
-  "Accumulates the total time for a site from a hashmap of URL times"
+  "Accumulates the total time for a site from a hashmap of URL times.
+
+  Returns a hashmap with the URL ID as the key, and the :time, :icon and
+  :host string on its value."
   [url-times]
   (->>
     (group-by #(hostname (:url %)) (vals url-times))
@@ -13,7 +16,6 @@
                   (hash-map :host (key %)
                             :time (apply + (map :time (val %)))
                             :icon (:icon (first (val %))))))
-
     (into {})))
 
 

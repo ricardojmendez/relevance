@@ -1,10 +1,10 @@
-(defproject relevance-chrome "1.0.6"
+(defproject relevance-chrome "1.0.7"
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.clojure/clojurescript "1.8.34"]
-                 [org.clojure/core.async "0.2.374"]
-                 [com.cognitect/transit-cljs "0.8.237"]
+  :dependencies [[org.clojure/clojure "1.8.0"]
+                 [org.clojure/clojurescript "1.9.93"]
+                 [org.clojure/core.async "0.2.385"]
+                 [com.cognitect/transit-cljs "0.8.239"]
                  [cljsjs/react-bootstrap "0.28.1-1" :exclusions [org.webjars.bower/jquery]]
                  [khroma "0.3.0"]
                  [prismatic/dommy "1.1.0"]
@@ -13,9 +13,9 @@
   :source-paths ["src/ui" "src/common" "src/background" "src/content"]
   :test-paths ["test"]
 
-  :plugins [[lein-cljsbuild "1.1.1"]
+  :plugins [[lein-cljsbuild "1.1.3"]
             [lein-chromebuild "0.3.1"]
-            [lein-doo "0.1.6-SNAPSHOT"]]
+            [lein-doo "0.1.6"]]
 
 
   :doo {:build "test"}
@@ -71,5 +71,3 @@
                                               :main          relevance.test.runner
                                               :optimizations :none
                                               :pretty-print  :true}}}}}})
-
-
