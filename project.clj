@@ -2,13 +2,13 @@
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.9.93"]
-                 [org.clojure/core.async "0.2.385"]
+                 [org.clojure/clojurescript "1.9.229"]
+                 [org.clojure/core.async "0.2.391"]
                  [com.cognitect/transit-cljs "0.8.239"]
-                 [cljsjs/react-bootstrap "0.28.1-1" :exclusions [org.webjars.bower/jquery]]
+                 [cljsjs/react-bootstrap "0.30.2-0" :exclusions [org.webjars.bower/jquery]]
                  [khroma "0.3.0"]
                  [prismatic/dommy "1.1.0"]
-                 [re-frame "0.7.0" :exclusions [cljsjs/react]]]
+                 [re-frame "0.8.0" :exclusions [cljsjs/react]]]
 
   :source-paths ["src/ui" "src/common" "src/background" "src/content"]
   :test-paths ["test"]
@@ -61,7 +61,7 @@
                 :ui         {:compiler {:optimizations :advanced
                                         :pretty-print  false}}}}}
              :test
-             {:dependencies [[lein-doo "0.1.6"]]
+             {:dependencies [[lein-doo "0.1.7"]]
               :cljsbuild
                             {:builds
                              {:test
