@@ -14,7 +14,7 @@
   :test-paths ["test"]
 
   :plugins [[lein-cljsbuild "1.1.3"]
-            [lein-chromebuild "0.3.1"]
+            [org.clojars.ricardojmendez/lein-chromebuild "0.3.2"]
             [lein-doo "0.1.6"]]
 
 
