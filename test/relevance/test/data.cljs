@@ -439,14 +439,51 @@
                  :ts    1446051494575
                  :title "New York spot price Gold..."}}
           acc  (data/accumulate-site-times data)]
-      ; There should be no empty hostnames
-      ; We check (get acc 0) because the result is indexed by the host-key,
-      ; which returns 0 on nil or empty.
+      ;; There should be no empty hostnames
+      ;; We check (get acc 0) because the result is indexed by the host-key,
+      ;; which returns 0 on nil or empty.
       (is (nil? (get acc 0)))
       ;; Let's verify we got the right data
       (is (= {971841386  {:time 39, :icon nil, :host "numergent.com"},
               -915908674 {:time 4, :icon nil, :host "www.kitco.com"}}
-             acc)))))
+             acc))))
+  (testing "Accumulate site times disregards the port for the URL when accumulating"
+    (let [data {2080624698
+                {:url   "/tags/khroma/"
+                 :time  117
+                 :ts    1445964037798
+                 :title "Khroma articles"}
+                -526558523
+                {:url   "http://numergent.com/opensource/"
+                 :time  27
+                 :ts    1445964037798
+                 :title "Open source projects"}
+                -380467869
+                {:url   "http://google.com"
+                 :time  12
+                 :ts    1445964037798
+                 :title "Google - default port"}
+                -849773167
+                {:url   "http://google.com:8080"
+                 :time  25
+                 :ts    1445964037798
+                 :title "Google - non-standard port"}
+                1917381154
+                {:url   "http://www.kitco.com/market/"
+                 :time  4
+                 :ts    1446051494575
+                 :title "New York spot price Gold..."}}
+          acc  (data/accumulate-site-times data)]
+      ;; There should be no empty hostnames
+      ;; We check (get acc 0) because the result is indexed by the host-key,
+      ;; which returns 0 on nil or empty.
+      (is (nil? (get acc 0)))
+      ;; Let's verify we got the right data
+      (is (= {971841386  {:time 27 :icon nil :host "numergent.com"}
+              -915908674 {:time 4 :icon nil :host "www.kitco.com"}
+              -1536293812 {:time 37 :icon nil :host "google.com"}}
+             acc))))
+  )
 
 
 (deftest test-accumulate-after-clean-up

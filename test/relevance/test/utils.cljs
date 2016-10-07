@@ -38,6 +38,12 @@
                -526558523 "http://numergent.com/opensource/"
                93819220 "about:blank"
                -847465478 "file:///Users/ricardo/Sources/user.html"
+               ;; URL keys are port-sensitive
+               -380467869 "http://google.com:80"
+               -849773167 "http://google.com:8080"
+               ;; Port 80 is treated the same as if it wasn't specified
+               2045915370 "http://google.com/index.html"
+               2045915370 "http://google.com:80/index.html"
                ))
 
 

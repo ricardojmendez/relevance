@@ -78,6 +78,10 @@
   [url]
   (if (not-empty url)
     (let [element   (dommy/set-attr! (dommy/create-element :a) :href url)
+          ;; For the url-key we _want_ to use the full host, not just the hostname
+          ;; since it will be used to indicate how much time we have spent on the
+          ;; specific URL. http://localhost/index.html will likely be different from
+          ;; http://localhost:8080/index.html
           shortened (str (.toLowerCase (.-host element)) (.-pathname element) (.-search element))]
       (hash-string shortened))
     0))
