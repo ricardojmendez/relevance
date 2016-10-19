@@ -69,9 +69,11 @@
   []
   ;; We should use dispatch for anything that does not absolutely require
   ;; immediate handling, to avoid interferring with the regular initialization
-  ;; and event flow.  On this case, I' using it only for log-content,
-  ;; which has no effect on app-state, and for on-suspend, which we want to
-  ;; handle immediately.
+  ;; and event flow.
+  ;;
+  ;; In this case, I'm using dispatch-sync only for log-content, which has no
+  ;; effect on app-state, and for on-suspend, which we want to handle
+  ;; immediately.
   (on-channel alarms/on-alarm dispatch ::on-alarm)
   (on-channel browser/on-clicked dispatch ::on-clicked-button)
   (on-channel runtime/on-message dispatch ::on-message)
@@ -239,8 +241,8 @@
       ;; We only store the idle tabs on the app state if we actually idled any.
       ;; That way we avoid losing the originally stored idled tabs when we
       ;; first go from active->idle and then from idle->locked (the first one
-      ;; would find tabs, the second one would and would overwrite the original
-      ;; saved set with an empty list).
+      ;; would find tabs, the second one wouldn't and would overwrite the
+      ;; original saved set with an empty list).
       (if active-tab
         (do
           (dispatch [action active-tab])
