@@ -11,7 +11,7 @@
             [khroma.runtime :as runtime]
             [khroma.storage :as storage]
             [reagent.core :as reagent]
-            [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
+            [re-frame.core :refer [dispatch reg-sub reg-event-db subscribe dispatch-sync]]
             [relevance.io :as io]
             [relevance.utils :as utils]
             [relevance.settings :refer [default-settings]])
@@ -27,15 +27,15 @@
 
 (defn general-query
   [db path]
-  (reaction (get-in @db path)))
+  (get-in db path))
 
 ;; Application data, will be saved
-(register-sub :data general-query)
-(register-sub :settings general-query)
-(register-sub :raw-data general-query)
+(reg-sub :data general-query)
+(reg-sub :settings general-query)
+(reg-sub :raw-data general-query)
 ;; Transient data items
-(register-sub :ui-state general-query)
-(register-sub :app-state general-query)
+(reg-sub :ui-state general-query)
+(reg-sub :app-state general-query)
 
 
 ;;;;----------------------------
@@ -56,7 +56,7 @@
 ;;;; Handlers
 ;;;;----------------------------
 
-(register-handler
+(reg-event-db
   :app-state-item
   (fn [app-state [_ path item]]
     (when (= [:ui-state :section] path)
@@ -64,7 +64,7 @@
     (assoc-in app-state path item)))
 
 
-(register-handler
+(reg-event-db
   :data-import
   (fn [app-state [_ transit-data]]
     ;; We actually just need to save it, since ::storage-changed takes care
@@ -76,7 +76,7 @@
 
 
 
-(register-handler
+(reg-event-db
   ::initialize
   (fn [_]
     (go
@@ -91,12 +91,12 @@
                  :site-page 0}}))
 
 
-(register-handler
+(reg-event-db
   :modal-info-set
   (fn [app-state [_ info]]
     (assoc-in app-state [:ui-state :modal-info] info)))
 
-(register-handler
+(reg-event-db
   :settings-parse
   (fn [app-state [_ settings]]
     (let [ignore-set (utils/to-string-set (:ignore-set settings))]
@@ -105,7 +105,7 @@
       app-state)))
 
 
-(register-handler
+(reg-event-db
   :settings-set
   (fn [app-state [_ settings save?]]
     ; (console/log "Saving" settings save?)
@@ -117,7 +117,7 @@
 
     (assoc app-state :settings settings)))
 
-(register-handler
+(reg-event-db
   ::storage-changed
   (fn [app-state [_ message]]
     (let [new-value (get-in message [:changes :data :newValue])
@@ -266,8 +266,8 @@
     (fn []
       [:div {:class "row"}
        [:p "If you wish to delete an item, hover the mouse over the listing. You'll see a "
-        [:i {:class    "fa fa-remove"
-             :style    {:color "red"}}]
+        [:i {:class "fa fa-remove"
+             :style {:color "red"}}]
         " appear besides the last visit time. Click it to remove the row."]
 
        [:p "Total: " @total " URLs."]
