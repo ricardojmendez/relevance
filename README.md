@@ -18,7 +18,7 @@ To get a development build, run
 lein chromebuild auto
 ```
 
-You'll find the `target/unpacked/`, which you'll need to install into Chrome using developer mode.
+You'll find the result in `target/unpacked/`, which you'll need to install into Chrome using developer mode.
 
 ## Release
 
