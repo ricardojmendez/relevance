@@ -3,6 +3,7 @@
                                      ms-hour ms-day ms-week]]
             [cljs.core.async :refer [>! <!]]
             [cljs.core :refer [random-uuid]]
+            [cljsjs.bootstrap]
             [cljsjs.react-bootstrap]
             [clojure.string :as string]
             [khroma.idle :as idle]
