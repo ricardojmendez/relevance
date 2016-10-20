@@ -6,7 +6,7 @@ It’ll create a natural arrangement where the tabs you have spent the longest o
 
 [You can read more about it here](https://numergent.com/relevance/).
 
-This is Relevance 1.0.7
+This is Relevance 1.0.8-SNAPSHOT.
 
 # Building
 
@@ -39,6 +39,27 @@ We can't test the entire application externally, since a lot of its API depend o
 ```
 lein with-profile test doo phantom
 ```
+
+
+# Development
+
+## Continuous integration
+
+I'm testing out both [Gitlab CI](https://gitlab.com/ricardojmendez/relevance/pipelines) and [Travis](https://travis-ci.org/ricardojmendez/relevance) in parallel.  I've had some issues with Travis builds failing to get dependencies, so I may deprecate it.
+
+Consider [Gitlab CI](https://gitlab.com/ricardojmendez/relevance/pipelines) to be the authoritative source.
+
+## Process
+
+I'm using [git-flow](http://nvie.com/posts/a-successful-git-branching-model/). Pull requests are welcome. Please base them off the `development` branch.
+
+## Version number conventions
+
+Relevance uses [break versioning](https://github.com/ptaoussanis/encore/blob/master/BREAK-VERSIONING.md).
+
+The development version on `project.clj` will reflect the current state of the code, and will normally include SNAPSHOT.
+
+I can't update the package version from `manifest.json` to include alphanumerics, so that version will remain as the last public until I'm nearing a release (or need to test a data migration).
 
 
 # License
