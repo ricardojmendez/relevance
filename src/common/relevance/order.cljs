@@ -26,13 +26,13 @@
         is-penalized? (and (not (is-http? url))
                            (not is-priority?))
         tab-time      (cond
-                        ; Add an extra score if it's a priority URL
+                        ;; Add an extra score if it's a priority URL
                         is-priority? (+ sound-extra-score idx)
-                        ; If a URL is penalized, we want it to at least have a
-                        ; value of 1, otherwise the tab time gets ignored and
-                        ; we'd default to using the raw site time
+                        ;; If a URL is penalized, we want it to at least have a
+                        ;; value of 1, otherwise the tab time gets ignored and
+                        ;; we'd default to using the raw site time
                         is-penalized? (max url-time 1)
-                        ; ... otherwise we just go with the raw URL time
+                        ;; ... otherwise we just go with the raw URL time
                         :else url-time)
         site-time     (or (:time (get site-times (host-key (hostname url)))) 0)
         total         (+ tab-time site-time)
