@@ -45,13 +45,15 @@ lein with-profile test doo phantom
 
 ## Continuous integration
 
-I'm testing out both [Gitlab CI](https://gitlab.com/ricardojmendez/relevance/pipelines) and [Travis](https://travis-ci.org/ricardojmendez/relevance) in parallel.  I've had some issues with Travis builds failing to get dependencies, so I may deprecate it.
+I'm using [Gitlab CI](https://gitlab.com/ricardojmendez/relevance/pipelines) to test Relevance.
 
-Consider [Gitlab CI](https://gitlab.com/ricardojmendez/relevance/pipelines) to be the authoritative source.
+[![build status](https://gitlab.com/ricardojmendez/relevance/badges/develop/build.svg)](https://gitlab.com/ricardojmendez/relevance/commits/develop)
+
+I've had some issues with Travis builds failing to get dependencies, so I decided to deprecate it.
 
 ## Process
 
-I'm using [git-flow](http://nvie.com/posts/a-successful-git-branching-model/). Pull requests are welcome. Please base them off the `development` branch.
+I'm using [git-flow](http://nvie.com/posts/a-successful-git-branching-model/). Pull requests are welcome. Please base them off the `develop` branch.
 
 ## Version number conventions
 
