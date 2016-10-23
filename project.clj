@@ -15,10 +15,11 @@
 
   :plugins [[lein-cljsbuild "1.1.3"]
             [org.clojars.ricardojmendez/lein-chromebuild "0.3.2"]
-            [lein-doo "0.1.6"]]
+            [lein-doo "0.1.7"]]
 
 
-  :doo {:build "test"}
+  :doo {:build "test"
+        :alias {:default [:phantom]}}
 
   :cljsbuild {:builds
               {:background

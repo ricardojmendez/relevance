@@ -37,7 +37,7 @@ Relevance uses `doo` for running ClojureScript tests. I normally use `phantomjs`
 We can't test the entire application externally, since a lot of its API depend on Chrome functions being present (which only happens when you're running as a Chrome extension).  You can however test the general functions running:
 
 ```
-lein with-profile test doo phantom
+lein with-profile test doo
 ```
 
 
