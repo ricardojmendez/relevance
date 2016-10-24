@@ -14,7 +14,7 @@
             [khroma.tabs :as tabs]
             [khroma.runtime :as runtime]
             [khroma.windows :as windows]
-            [re-frame.core :refer [dispatch register-sub register-handler subscribe dispatch-sync]]
+            [re-frame.core :refer [dispatch reg-event-db subscribe dispatch-sync]]
             [khroma.extension :as ext]
             [khroma.browser-action :as browser]
             [khroma.storage :as storage])
@@ -69,9 +69,11 @@
   []
   ;; We should use dispatch for anything that does not absolutely require
   ;; immediate handling, to avoid interferring with the regular initialization
-  ;; and event flow.  On this case, I' using it only for log-content,
-  ;; which has no effect on app-state, and for on-suspend, which we want to
-  ;; handle immediately.
+  ;; and event flow.
+  ;;
+  ;; In this case, I'm using dispatch-sync only for log-content, which has no
+  ;; effect on app-state, and for on-suspend, which we want to handle
+  ;; immediately.
   (on-channel alarms/on-alarm dispatch ::on-alarm)
   (on-channel browser/on-clicked dispatch ::on-clicked-button)
   (on-channel runtime/on-message dispatch ::on-message)
@@ -113,7 +115,7 @@
 ;;;;-------------------------------------
 
 
-(register-handler
+(reg-event-db
   ::initialize
   (fn [_]
     (go
@@ -133,7 +135,7 @@
     {:app-state {}}))
 
 
-(register-handler
+(reg-event-db
   :data-load
   (fn [app-state [_ data settings]]
     (let [migrated   (migrations/migrate-to-latest data)
@@ -174,7 +176,7 @@
 
 
 
-(register-handler
+(reg-event-db
   :data-set
   (fn [app-state [_ key item]]
     (let [new-state (assoc-in app-state [:data key] item)]
@@ -182,7 +184,7 @@
       new-state)))
 
 
-(register-handler
+(reg-event-db
   :delete-url
   (fn [app-state [_ url]]
     (let [data      (:data app-state)
@@ -199,7 +201,7 @@
       (assoc app-state :data new-data))))
 
 
-(register-handler
+(reg-event-db
   :handle-activation
   (fn [app-state [_ tab start-time]]
     ; (console/trace "Handling activation" tab)
@@ -213,7 +215,7 @@
       app-state)))
 
 
-(register-handler
+(reg-event-db
   :handle-deactivation
   (fn
     ;; We get two parameters: the tab, and optionally the time at which it
@@ -226,7 +228,7 @@
     app-state))
 
 
-(register-handler
+(reg-event-db
   :idle-state-change
   (fn [app-state [_ message]]
     (let [state      (:newState message)
@@ -239,8 +241,8 @@
       ;; We only store the idle tabs on the app state if we actually idled any.
       ;; That way we avoid losing the originally stored idled tabs when we
       ;; first go from active->idle and then from idle->locked (the first one
-      ;; would find tabs, the second one would and would overwrite the original
-      ;; saved set with an empty list).
+      ;; would find tabs, the second one wouldn't and would overwrite the
+      ;; original saved set with an empty list).
       (if active-tab
         (do
           (dispatch [action active-tab])
@@ -251,7 +253,7 @@
 
 
 
-(register-handler
+(reg-event-db
   ::on-alarm
   (fn [app-state [_ {:keys [alarm]}]]
     (when (= window-alarm (:name alarm))
@@ -259,7 +261,7 @@
     app-state))
 
 
-(register-handler
+(reg-event-db
   ::on-clicked-button
   (fn [app-state [_ {:keys [tab]}]]
     ;; Force it to track the time up until now
@@ -270,14 +272,14 @@
     app-state))
 
 
-(register-handler
+(reg-event-db
   ::on-clicked-menu
   (fn [app-state [_ {:keys [info tab]}]]
     (dispatch [(keyword (:menuItemId info)) tab])
     app-state))
 
 
-(register-handler
+(reg-event-db
   ::on-message
   (fn [app-state [_ payload]]
     (let [{:keys [message sender]} (keywordize-keys payload)
@@ -293,21 +295,21 @@
 
 
 
-(register-handler
+(reg-event-db
   :on-relevance-show-data
   (fn [app-state [_]]
     (open-results-tab)
     app-state))
 
 
-(register-handler
+(reg-event-db
   :on-relevance-sort-tabs
   (fn [app-state [_ tab]]
     (sort-tabs! (:windowId tab) app-state)
     app-state))
 
 
-(register-handler
+(reg-event-db
   :suspend
   ;; The message itself is not relevant, we only care that we are being suspended
   (fn [app-state [_]]
@@ -316,7 +318,7 @@
     app-state))
 
 
-(register-handler
+(reg-event-db
   ::tab-activated
   (fn [app-state [_ {:keys [activeInfo]}]]
     (let [{:keys [tabId windowId]} activeInfo
@@ -331,7 +333,7 @@
 
 
 
-(register-handler
+(reg-event-db
   ::tab-updated
   (fn [app-state [_ {:keys [tabId tab]}]]
     (let [active-tab (:active-tab app-state)
@@ -354,7 +356,7 @@
 
 
 
-(register-handler
+(reg-event-db
   :track-time
   (fn [app-state [_ tab time]]
     (let [data       (:data app-state)
@@ -366,7 +368,7 @@
       (assoc app-state :data new-data))))
 
 
-(register-handler
+(reg-event-db
   ::window-focus
   (fn [app-state [_ {:keys [windowId]}]]
     ; (console/trace "Current window" windowId)

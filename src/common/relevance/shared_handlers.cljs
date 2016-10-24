@@ -1,9 +1,9 @@
 (ns relevance.shared-handlers
   (:require [khroma.log :as console]
-            [re-frame.core :refer [register-handler]]))
+            [re-frame.core :refer [reg-event-db]]))
 
 
-(register-handler
+(reg-event-db
   :log-content
   (fn [app-state [_ content]]
     (console/log "Log event:" content)

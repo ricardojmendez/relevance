@@ -6,7 +6,7 @@ It’ll create a natural arrangement where the tabs you have spent the longest o
 
 [You can read more about it here](https://numergent.com/relevance/).
 
-This is Relevance 1.0.7
+This is Relevance 1.0.8.
 
 # Building
 
@@ -18,7 +18,7 @@ To get a development build, run
 lein chromebuild auto
 ```
 
-You'll find the `target/unpacked/`, which you'll need to install into Chrome using developer mode.
+You'll find the result in `target/unpacked/`, which you'll need to install into Chrome using developer mode.
 
 ## Release
 
@@ -37,8 +37,31 @@ Relevance uses `doo` for running ClojureScript tests. I normally use `phantomjs`
 We can't test the entire application externally, since a lot of its API depend on Chrome functions being present (which only happens when you're running as a Chrome extension).  You can however test the general functions running:
 
 ```
-lein with-profile test doo phantom
+lein with-profile test doo
 ```
+
+
+# Development
+
+## Continuous integration
+
+I'm using [Gitlab CI](https://gitlab.com/ricardojmendez/relevance/pipelines) to test Relevance.
+
+[![build status](https://gitlab.com/ricardojmendez/relevance/badges/develop/build.svg)](https://gitlab.com/ricardojmendez/relevance/commits/develop)
+
+I've had some issues with Travis builds failing to get dependencies, so I decided to deprecate it.
+
+## Process
+
+I'm using [git-flow](http://nvie.com/posts/a-successful-git-branching-model/). Pull requests are welcome. Please base them off the `develop` branch.
+
+## Version number conventions
+
+Relevance uses [break versioning](https://github.com/ptaoussanis/encore/blob/master/BREAK-VERSIONING.md).
+
+The development version on `project.clj` will reflect the current state of the code, and will normally include SNAPSHOT.
+
+I can't update the package version from `manifest.json` to include alphanumerics, so that version will remain as the last public until I'm nearing a release (or need to test a data migration).
 
 
 # License
