@@ -334,7 +334,7 @@
    [:div {:class "page-header col-sm-10 col-sm-offset-1"}
     [:h1 "Welcome!"]]
    [:div {:class "col-sm-10 col-sm-offset-1"}
-    [:h2 "Thanks for installing Relevance 1.0.7"]
+    [:h2 "Thanks for installing Relevance 1.0.8"]
     [:p [:a {:href "http://numergent.com/relevance/" :target "_blank"} "You can read about the latest changes here."]]
     [:p "Relevance will help you sort your tabs when you have too many of them open. Here's how to use it:"]
     [:ul
