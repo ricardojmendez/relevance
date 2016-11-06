@@ -289,8 +289,6 @@
         :reload-data (go (dispatch [:data-load (<! (io/load :data)) (<! (io/load :settings))]))
         :delete-url (dispatch [:delete-url data])
         (console/error "Nothing matched" message)))
-
-
     app-state))
 
 

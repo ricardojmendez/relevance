@@ -114,7 +114,6 @@
       ;; they can have an effect on behavior.
       (io/save :settings settings #(runtime/send-message {:action :reload-data}))
       (dispatch [:app-state-item [:ui-state :section] :url-times]))
-
     (assoc app-state :settings settings)))
 
 (reg-event-db
@@ -224,8 +223,6 @@
                         (< age-ms (* 7 ms-day)) "#ff8000"
                         (< age-ms (* 14 ms-day)) "#cc6600"
                         :else "#994c00")]
-
-
           ^{:key i}
           [:tr {:class "has_on_hover"}
            [:td {:class "col-sm-2"}
@@ -280,8 +277,7 @@
            :last       true
            :ellipsis   true
            :maxButtons 20
-           :onSelect   #(dispatch [:app-state-item [:ui-state :url-page] (dec (aget %2 "eventKey"))])}])
-
+           :onSelect   #(dispatch [:app-state-item [:ui-state :url-page] (dec %1)])}])
        [:div {:class "card"}
         [:div {:class "content table-responsive table-full-width"}
          [:table {:class "table table-striped table-hover"}
@@ -334,7 +330,7 @@
    [:div {:class "page-header col-sm-10 col-sm-offset-1"}
     [:h1 "Welcome!"]]
    [:div {:class "col-sm-10 col-sm-offset-1"}
-    [:h2 "Thanks for installing Relevance 1.0.8"]
+    [:h2 "Thanks for installing Relevance 1.0.9"]
     [:p [:a {:href "http://numergent.com/relevance/" :target "_blank"} "You can read about the latest changes here."]]
     [:p "Relevance will help you sort your tabs when you have too many of them open. Here's how to use it:"]
     [:ul
@@ -409,8 +405,6 @@
                     :rows      30
                     :value     @import-data
                     :on-change #(reset! import-data (-> % .-target .-value))}]]
-
-
        [:div {:class "row"}
         [:a {:class    "btn btn-primary btn-sm"
              :on-click #(dispatch [:data-import @import-data])} "Import"]]])))
@@ -422,25 +416,19 @@
         sound-to-left? (subscribe [:settings :sound-to-left?])
         our-ignore     (reagent/atom (string/join "\n" (sort @ignore-set)))
         our-sound      (reagent/atom @sound-to-left?)]
-
     (fn []
       [:div {:class "col-sm-12"}
        [:div {:class "row"}
         [:div {:class "col-sm-12"}
          [:h3 "Ignore domains"]]
-
         [:div {:class "col-sm-6"}
          [:p "Type below the domains that you want ignore, one per line."]
          [:textarea {:class     "form-control"
                      :value     @our-ignore
                      :rows      10
                      :on-change #(reset! our-ignore (-> % .-target .-value))}]]
-
-
         [:div {:class "col-sm-6"}
          [:p {:class "alert alert-info"} [:strong "Heads up! "] "Adding a domain to the ignore list will remove the data Relevance currently has for it."]]]
-
-
        [:div {:class "row"}
         [:div {:class "col-sm-12"}
          [:h3 "Prioritize tabs with sound?"]]
@@ -452,10 +440,7 @@
                    :style     {:margin-right "4px"}}]
 
           "If selected, tabs with sound will be prioritized, and moved to the left when sorting."]]
-
         [:div {:class "col-sm-6"}]]
-
-
        [:div {:class "row"}
         [:div {:class "col-sm-12"}
          [:a {:class    "btn btn-danger btn-sm"
