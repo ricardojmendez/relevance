@@ -277,7 +277,7 @@
            :last       true
            :ellipsis   true
            :maxButtons 20
-           :onSelect   #(dispatch [:app-state-item [:ui-state :url-page] (dec (aget %2 "eventKey"))])}])
+           :onSelect   #(dispatch [:app-state-item [:ui-state :url-page] (dec %1)])}])
        [:div {:class "card"}
         [:div {:class "content table-responsive table-full-width"}
          [:table {:class "table table-striped table-hover"}
