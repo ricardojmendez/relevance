@@ -42,10 +42,6 @@
 ;;;; Functions
 ;;;;----------------------------
 
-(defn dispatch-on-press-enter [e d]
-  (if (= 13 (.-which e))
-    (dispatch d)))
-
 
 (defn filter-tabs
   "Filters out the tabs we will not show or manipulate, for instance, chrome extensions"
