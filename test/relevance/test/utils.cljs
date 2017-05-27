@@ -34,8 +34,8 @@
                -314744948 "https://www.google.com"
                -314744948 "https://www.google.com/#hash"
                -596725840 "https://www.google.com/somePath?q=v"
-               -327774960 "http://numergent.com/tags/khroma/"
-               -526558523 "http://numergent.com/opensource/"
+               -327774960 "https://numergent.com/tags/khroma/"
+               -526558523 "https://numergent.com/opensource/"
                93819220 "about:blank"
                -847465478 "file:///Users/ricardo/Sources/user.html"
                ;; URL keys are port-sensitive
@@ -86,9 +86,9 @@
                   "https://www.Google.com/some?q=v" "www.google.com"
                   "https://WWW.GOOGLE.COM/some?q=v" "www.google.com"
                   "http://WWW.GOOGLE.COM/some?q=v" "www.google.com"
-                  "https://GOOGLE.COM:443/some?q=v" "google.com"      ; host would have included the port
-                  "https://GOOGLE.COM:3000/some?q=v" "google.com"     ; host would have included the port
-                  "http://numergent.com/tag/khroma" "numergent.com"
+                  "https://GOOGLE.COM:443/some?q=v" "google.com" ; host would have included the port
+                  "https://GOOGLE.COM:3000/some?q=v" "google.com" ; host would have included the port
+                  "https://numergent.com/tag/khroma" "numergent.com"
                   "about:blank" ""
                   "chrome://extensions/?id=okhigbflgnbihoiokilagelkalkcigfp" "extensions"
                   "chrome-extension://okhigbflgnbihoiokilagelkalkcigfp/index.html" "okhigbflgnbihoiokilagelkalkcigfp"

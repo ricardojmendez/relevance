@@ -327,7 +327,7 @@
     [:h1 "Welcome!"]]
    [:div {:class "col-sm-10 col-sm-offset-1"}
     [:h2 "Thanks for installing Relevance 1.0.9"]
-    [:p [:a {:href "http://numergent.com/relevance/" :target "_blank"} "You can read about the latest changes here."]]
+    [:p [:a {:href "https://numergent.com/relevance/" :target "_blank"} "You can read about the latest changes here."]]
     [:p "Relevance will help you sort your tabs when you have too many of them open. Here's how to use it:"]
     [:ul
      [:li "Use Chrome as you normally would. Relevance will privately track your reading habits."]
@@ -361,7 +361,7 @@
      [:a {:href "https://twitter.com/intent/tweet?text=Hey%20@argesric%20about%20&hashtags=relevance" :target "_blank"}
       "please reach out on Twitter"]
      " or "
-     [:a {:href "http://numergent.com/#contact"} "through our site"]
+     [:a {:href "https://numergent.com/#contact"} "through our site"]
      "."]]
    [:div {:class "col-sm-10 col-sm-offset-1"}
     [:h2 "Experimental StartPage integration"]
