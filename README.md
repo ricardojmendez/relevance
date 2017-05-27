@@ -6,7 +6,7 @@ It’ll create a natural arrangement where the tabs you have spent the longest o
 
 [You can read more about it here](https://numergent.com/relevance/).
 
-This is Relevance 1.0.9.
+This is Relevance 1.0.10.
 
 # Building
 
@@ -68,4 +68,4 @@ I can't update the package version from `manifest.json` to include alphanumerics
 
 Includes pixeden's [iOS 7 vector icons](http://themes-pixeden.com/font-demos/7-stroke/).
 
-Relevance is (c) 2016 Numergent Limited, and released under the [MIT License](https://tldrlegal.com/license/mit-license).
+Relevance is (c) 2016-2017 Numergent Limited, and released under the [MIT License](https://tldrlegal.com/license/mit-license).

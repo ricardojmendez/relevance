@@ -20,12 +20,12 @@
    :suspend-info nil
    :data-version 1
    :url-times    {-327774960
-                  {:url   "http://numergent.com/tags/khroma/"
+                  {:url   "https://numergent.com/tags/khroma/"
                    :time  117
                    :ts    1445964037798
                    :title "Khroma articles"}
                   -526558523
-                  {:url   "http://numergent.com/opensource/"
+                  {:url   "https://numergent.com/opensource/"
                    :time  27
                    :ts    1445964037798
                    :title "Open source projects"}
@@ -61,7 +61,7 @@
                    :ts    1446028215912
                    :title "Splunk"}}
 
-   :site-times   {971841386   {:icon "http://numergent.com/favicon.ico"
+   :site-times   {971841386   {:icon "https://numergent.com/favicon.ico"
                                :time 144
                                :host "numergent.com"}
                   -1466097211 {:icon nil
@@ -90,7 +90,7 @@
 (deftest test-url-key
   ;;Test the url-key function against known values
   (are [url key] (= (utils/url-key url) key)
-                 "http://numergent.com/articles/" -925262547
+                 "https://numergent.com/articles/" -925262547
                  "https://google.com/search?q=v" 633277110
                  "https://startpage.com/my/settings#hash" 317544347
                  "http://getprismatic.com/oauth-complete?result=login" 1609181525
@@ -101,21 +101,21 @@
 
 (deftest test-track-url-time
   (testing "Add time to an existing tab"
-    (let [tab    {:url        "http://numergent.com/opensource/"
+    (let [tab    {:url        "https://numergent.com/opensource/"
                   :title      "Open source project details"
-                  :favIconUrl "http://numergent.com/favicon.png"}
+                  :favIconUrl "https://numergent.com/favicon.png"}
           ts     1445964037799
           result (data/track-url-time (:url-times test-db)
                                       tab
                                       2
                                       ts)
-          id     (utils/url-key "http://numergent.com/opensource/")
+          id     (utils/url-key "https://numergent.com/opensource/")
           item   (get result id)]
       (is result)
       (is (= 7 (count result)) "We should get back the same number of elements")
       (is item)
       (is (nil? (:icon item)))
-      (are [k] (= (k item) (k tab)) :url :title)                      ; All the keys should have been updated from the record we're sending
+      (are [k] (= (k item) (k tab)) :url :title)            ; All the keys should have been updated from the record we're sending
       (is (= ts (:ts item)) "Item should have been time-stamped")
       (is (= 29 (:time item)) "Time should have increased")
       (doseq [other (dissoc result id)]
@@ -123,20 +123,20 @@
 
 
   (testing "Add time to a new tab"
-    (let [tab     {:url        "http://numergent.com/"
+    (let [tab     {:url        "https://numergent.com/"
                    :title      "Numergent limited"
-                   :favIconUrl "http://numergent.com/favicon.png"}
+                   :favIconUrl "https://numergent.com/favicon.png"}
           ts      1445964037799
           result  (data/track-url-time (:url-times test-db)
                                        tab
                                        9
                                        ts)
-          tab-key (utils/url-key "http://numergent.com/")
+          tab-key (utils/url-key "https://numergent.com/")
           item    (get result tab-key)]
       (is result)
       (is (= 8 (count result)) "We should have an extra element")
       (is item)
-      (are [k] (= (k item) (k tab)) :url :title)                      ; All the keys should have been updated from the record we're sending
+      (are [k] (= (k item) (k tab)) :url :title)            ; All the keys should have been updated from the record we're sending
       (is (= ts (:ts item)) "Item should have been time-stamped")
       (is (= 9 (:time item)) "Time should have been assigned")
       (doseq [other (dissoc result tab-key)]
@@ -144,14 +144,14 @@
 
 
   (testing "Add zero seconds"
-    (let [tab     {:url   "http://numergent.com/about/"
+    (let [tab     {:url   "https://numergent.com/about/"
                    :title "About Numergent"}
           ts      1445964037799
           result  (data/track-url-time (:url-times test-db)
                                        tab
                                        0
                                        ts)
-          tab-key (utils/url-key "http://numergent.com/about/")
+          tab-key (utils/url-key "https://numergent.com/about/")
           item    (get result tab-key)]
       (is result)
       (is (nil? item) "We should not have an item with that URL")
@@ -175,23 +175,23 @@
       (is (= result (:url-times test-db)) "Database should not have been altered")))
 
   (testing "Add time to a new tab on an empty set"
-    (let [tab     {:url        "http://numergent.com/"
+    (let [tab     {:url        "https://numergent.com/"
                    :title      "Numergent limited"
-                   :favIconUrl "http://numergent.com/favicon.png"}
+                   :favIconUrl "https://numergent.com/favicon.png"}
           ts      12345
           result  (data/track-url-time {} tab 9 ts)
-          tab-key (utils/url-key "http://numergent.com/")
+          tab-key (utils/url-key "https://numergent.com/")
           item    (get result tab-key)]
       (is result)
       (is (= 1 (count result)) "We should have an extra element")
       (is item)
-      (are [k] (= (k item) (k tab)) :url :title)                      ; All the keys should have been updated from the record we're sending
+      (are [k] (= (k item) (k tab)) :url :title)            ; All the keys should have been updated from the record we're sending
       (is (= ts (:ts item)) "Item should have been time-stamped")
       (is (= 9 (:time item)) "Time should have increased")))
   (testing "Attempting to add time to an invalid URL causes no changes"
     (let [tab    {:url   nil
                   :title "Numergent limited"
-                  :icon  "http://numergent.com/favicon.png"}
+                  :icon  "https://numergent.com/favicon.png"}
           ts     12345
           result (data/track-url-time (:url-times test-db) tab 9 ts)]
       (is (= result (:url-times test-db))))
@@ -203,15 +203,15 @@
   (testing "Attempting to add time to an ignored URL causes no changes"
     ;; Repeating almost the exact same test as when we tracked the time for
     ;; Numergent, only passing it as an ignore domain now.
-    (let [tab         {:url        "http://numergent.com/"
+    (let [tab         {:url        "https://numergent.com/"
                        :title      "Numergent limited"
-                       :favIconUrl "http://numergent.com/favicon.png"}
+                       :favIconUrl "https://numergent.com/favicon.png"}
           ts          1445964037799
           with-ignore (data/track-url-time (:url-times test-db) tab 9 ts
                                            :ignore-set #{"localhost" "somedomain.com" "numergent.com"})
           no-ignore   (data/track-url-time (:url-times test-db) tab 9 ts
                                            :ignore-set #{"localhost" "somedomain.com"})
-          tab-key     (utils/url-key "http://numergent.com/")
+          tab-key     (utils/url-key "https://numergent.com/")
           item        (get with-ignore tab-key)]
       (is with-ignore)
       (is (nil? item))
@@ -225,15 +225,15 @@
 
 (deftest test-track-site-time
   (testing "Add time to an empty database"
-    (let [tab    {:url        "http://numergent.com/opensource/"
+    (let [tab    {:url        "https://numergent.com/opensource/"
                   :title      "Open source project details"
-                  :favIconUrl "http://numergent.com/favicon.png"}
+                  :favIconUrl "https://numergent.com/favicon.png"}
           ts     1445964037799
           result (data/track-site-time {}
                                        tab
                                        1234
                                        ts)
-          id     (utils/host-key (utils/hostname "http://numergent.com/opensource/"))
+          id     (utils/host-key (utils/hostname "https://numergent.com/opensource/"))
           item   (get result id)]
       (is result)
       (is (= 1 (count result)) "We should get back a single element")
@@ -249,15 +249,15 @@
 
 
   (testing "Add time to an existing database for an existing site"
-    (let [tab    {:url        "http://numergent.com/opensource/index.html"
+    (let [tab    {:url        "https://numergent.com/opensource/index.html"
                   :title      "Further open source project details"
-                  :favIconUrl "http://numergent.com/newfavicon.png"}
+                  :favIconUrl "https://numergent.com/newfavicon.png"}
           ts     1445964037900
           result (data/track-site-time (:site-times test-db)
                                        tab
                                        3
                                        ts)
-          id     (utils/host-key (utils/hostname "http://numergent.com/opensource/"))
+          id     (utils/host-key (utils/hostname "https://numergent.com/opensource/"))
           item   (get result id)]
       (is result)
       (is (= 6 (count result)) "We should get back the same number of sites")
@@ -331,15 +331,15 @@
   (testing "Add time to an ignored site does not change the database"
     ;; Repeating almost the exact same test as when we tracked the time for
     ;; Numergent, only passing it as an ignore domain now.
-    (let [tab         {:url        "http://numergent.com/opensource/index.html"
+    (let [tab         {:url        "https://numergent.com/opensource/index.html"
                        :title      "Further open source project details"
-                       :favIconUrl "http://numergent.com/newfavicon.png"}
+                       :favIconUrl "https://numergent.com/newfavicon.png"}
           ts          1445964037900
           with-ignore (data/track-site-time (:site-times test-db) tab 3 ts
                                             :ignore-set #{"localhost" "somedomain.com" "numergent.com"})
           no-ignore   (data/track-site-time (:site-times test-db) tab 3 ts
                                             :ignore-set #{"localhost" "somedomain.com"})
-          id          (utils/host-key (utils/hostname "http://numergent.com/opensource/"))
+          id          (utils/host-key (utils/hostname "https://numergent.com/opensource/"))
           item        (get no-ignore id)]
       (is with-ignore)
       (is (= with-ignore (:site-times test-db)))
@@ -360,7 +360,7 @@
       (is (= 5 (count pruned)))
       ;; We removed the right elements
       (is (nil? (get pruned (utils/url-key "http://splunk.com/"))))
-      (is (nil? (get pruned (utils/url-key "http://numergent.com/opensource/"))))
+      (is (nil? (get pruned (utils/url-key "https://numergent.com/opensource/"))))
       ;; The very briefly accessed prismatic login remains because of its timestamp
       (is (get pruned (utils/url-key "http://getprismatic.com/oauth-complete?result=login")))))
 
@@ -424,12 +424,12 @@
                  :ts    1445964037798
                  :title "Khroma articles"}
                 -526558523
-                {:url   "http://numergent.com/opensource/"
+                {:url   "https://numergent.com/opensource/"
                  :time  27
                  :ts    1445964037798
                  :title "Open source projects"}
                 -327774960
-                {:url   "http://numergent.com/tags/khroma/"
+                {:url   "https://numergent.com/tags/khroma/"
                  :time  12
                  :ts    1445964037798
                  :title "Khroma articles"}
@@ -454,7 +454,7 @@
                  :ts    1445964037798
                  :title "Khroma articles"}
                 -526558523
-                {:url   "http://numergent.com/opensource/"
+                {:url   "https://numergent.com/opensource/"
                  :time  27
                  :ts    1445964037798
                  :title "Open source projects"}
@@ -479,8 +479,8 @@
       ;; which returns 0 on nil or empty.
       (is (nil? (get acc 0)))
       ;; Let's verify we got the right data
-      (is (= {971841386  {:time 27 :icon nil :host "numergent.com"}
-              -915908674 {:time 4 :icon nil :host "www.kitco.com"}
+      (is (= {971841386   {:time 27 :icon nil :host "numergent.com"}
+              -915908674  {:time 4 :icon nil :host "www.kitco.com"}
               -1536293812 {:time 37 :icon nil :host "google.com"}}
              acc))))
   )

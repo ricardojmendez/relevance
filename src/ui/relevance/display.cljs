@@ -42,10 +42,6 @@
 ;;;; Functions
 ;;;;----------------------------
 
-(defn dispatch-on-press-enter [e d]
-  (if (= 13 (.-which e))
-    (dispatch d)))
-
 
 (defn filter-tabs
   "Filters out the tabs we will not show or manipulate, for instance, chrome extensions"
@@ -101,7 +97,9 @@
   (fn [app-state [_ settings]]
     (let [ignore-set (utils/to-string-set (:ignore-set settings))]
       (dispatch [:settings-set {:ignore-set     ignore-set
-                                :sound-to-left? (:sound-to-left? settings)} true])
+                                :sound-to-left? (:sound-to-left? settings)
+                                :startpage?     (:startpage? settings)} true
+                 ])
       app-state)))
 
 
@@ -330,8 +328,8 @@
    [:div {:class "page-header col-sm-10 col-sm-offset-1"}
     [:h1 "Welcome!"]]
    [:div {:class "col-sm-10 col-sm-offset-1"}
-    [:h2 "Thanks for installing Relevance 1.0.9"]
-    [:p [:a {:href "http://numergent.com/relevance/" :target "_blank"} "You can read about the latest changes here."]]
+    [:h2 "Thanks for installing Relevance 1.0.10"]
+    [:p [:a {:href "https://numergent.com/relevance/" :target "_blank"} "You can read about the latest changes here."]]
     [:p "Relevance will help you sort your tabs when you have too many of them open. Here's how to use it:"]
     [:ul
      [:li "Use Chrome as you normally would. Relevance will privately track your reading habits."]
@@ -365,7 +363,7 @@
      [:a {:href "https://twitter.com/intent/tweet?text=Hey%20@argesric%20about%20&hashtags=relevance" :target "_blank"}
       "please reach out on Twitter"]
      " or "
-     [:a {:href "http://numergent.com/#contact"} "through our site"]
+     [:a {:href "https://numergent.com/#contact"} "through our site"]
      "."]]
    [:div {:class "col-sm-10 col-sm-offset-1"}
     [:h2 "Experimental StartPage integration"]
@@ -373,7 +371,10 @@
     [:p "This version of Relevance has an experimental integration with "
      [:a {:href "https://startpage.com" :target "_blank"} "StartPage"]
      ". After you run a search, it'll look at the results on your current page and re-prioritize the links shown to bring to the front those you have spent the longest reading."]
-    [:p "Every search engine behaves differently, so if there's enough interest, I could extend this integration to others as well."]]])
+    [:p "StartPage integration is on by default for historical reasons, but I may remove it in the future. "
+     "You can toggle it from the " [:a {:on-click #(dispatch [:app-state-item [:ui-state :section] :settings])}
+                                    "settings section"] "."]
+    ]])
 
 
 
@@ -414,8 +415,10 @@
 (defn div-settings []
   (let [ignore-set     (subscribe [:settings :ignore-set])
         sound-to-left? (subscribe [:settings :sound-to-left?])
+        startpage?     (subscribe [:settings :startpage?])
         our-ignore     (reagent/atom (string/join "\n" (sort @ignore-set)))
-        our-sound      (reagent/atom @sound-to-left?)]
+        our-sound      (reagent/atom @sound-to-left?)
+        our-startpage  (reagent/atom @startpage?)]
     (fn []
       [:div {:class "col-sm-12"}
        [:div {:class "row"}
@@ -443,9 +446,21 @@
         [:div {:class "col-sm-6"}]]
        [:div {:class "row"}
         [:div {:class "col-sm-12"}
+         [:h3 "Enable StartPage result ordering?"]]
+        [:div {:class "col-sm-6"}
+         [:p
+          [:input {:type      :checkbox
+                   :checked   @our-startpage
+                   :on-change #(reset! our-startpage (-> % .-target .-checked))
+                   :style     {:margin-right "4px"}}]
+          "If selected, results on StartPage will be sorted prioritizing those you have visited the most."]]
+        [:div {:class "col-sm-6"}]]
+       [:div {:class "row"}
+        [:div {:class "col-sm-12"}
          [:a {:class    "btn btn-danger btn-sm"
               :on-click #(dispatch [:settings-parse {:ignore-set     @our-ignore
-                                                     :sound-to-left? @our-sound}])} "Save settings"]]]])))
+                                                     :sound-to-left? @our-sound
+                                                     :startpage?     @our-startpage}])} "Save settings"]]]])))
 
 
 
