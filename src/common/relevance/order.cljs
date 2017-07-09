@@ -15,7 +15,8 @@
 ;;;;------------------------------------
 
 (defn time-score
-  "Returns a score for a tab based on the total time spent at both URLs and sites"
+  "Returns a score for a tab based on the total time spent at both a URL and
+  the site the URL belongs to."
   [tab url-times site-times settings]
   (let [url           (:url tab)
         idx           (:index tab)

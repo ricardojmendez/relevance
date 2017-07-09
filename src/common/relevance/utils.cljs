@@ -87,7 +87,8 @@
     0))
 
 (defn to-string-set
-  "Split a string into a string set using commas, semi-colons or new lines, and returns it as a set"
+  "Split a string using commas, semi-colons or new lines, trims the resulting
+  elements, and returns them as a set"
   [s]
   (->>
     (string/split (or s "") #",|\n|;| ")

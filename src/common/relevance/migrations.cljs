@@ -41,7 +41,7 @@
 
 
 (defn migrate-to-latest
-  "Takes a data set and interates on it until no more version migrations can be applied"
+  "Takes a data set and iterates on it until no more version migrations can be applied"
   [data]
   (loop [to-migrate data]
     (let [migrated (migrate to-migrate)]
