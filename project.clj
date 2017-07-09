@@ -2,13 +2,13 @@
   :license {:name "MIT License"
             :url  "https://tldrlegal.com/license/mit-license"}
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.9.542"]
-                 [org.clojure/core.async "0.3.442"]
+                 [org.clojure/clojurescript "1.9.671"]
+                 [org.clojure/core.async "0.3.443"]
                  [com.cognitect/transit-cljs "0.8.239"]
-                 [cljsjs/react-bootstrap "0.30.7-0"]
+                 [cljsjs/react-bootstrap "0.31.0-0"]
                  [khroma "0.3.0"]
                  [prismatic/dommy "1.1.0"]
-                 [re-frame "0.9.3" :exclusions [cljsjs/react]]]
+                 [re-frame "0.9.4" :exclusions [cljsjs/react]]]
 
   :source-paths ["src/ui" "src/common" "src/background" "src/content"]
   :test-paths ["test"]
