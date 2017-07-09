@@ -21,6 +21,11 @@
   :doo {:build "test"
         :alias {:default [:phantom]}}
 
+  :aliases {"test"
+            ["do"
+             ["clean"]
+             ["with-profile" "test" "doo" "once"]]}
+
   :cljsbuild {:builds
               {:background
                {:source-paths ["src/background" "src/common"]
