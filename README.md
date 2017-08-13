@@ -47,7 +47,7 @@ lein with-profile test doo
 
 I'm using [Gitlab CI](https://gitlab.com/ricardojmendez/relevance/pipelines) to test Relevance.
 
-[![build status](https://gitlab.com/ricardojmendez/relevance/badges/develop/build.svg)](https://gitlab.com/ricardojmendez/relevance/commits/develop)
+[![build status](https://gitlab.com/Numergent/relevance/badges/develop/build.svg)](https://gitlab.com/Numergent/relevance/commits/develop)
 
 I've had some issues with Travis builds failing to get dependencies, so I decided to deprecate it.
 
