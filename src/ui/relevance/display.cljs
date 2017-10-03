@@ -176,7 +176,7 @@
           "")]])))
 
 
-;; We could actually move modal-confirm to a component namespace, parametrize it.
+;; TODO: We could actually move modal-confirm to a component namespace, parametrize it.
 (defn modal-confirm []
   (let [modal-info (subscribe [:ui-state :modal-info])
         ;; On the next one, we can't use not-empty because (= nil (not-empty nil)), and :show expects true/false,
@@ -286,8 +286,6 @@
             [:th "Last visit"]]]
           [:tbody
            (list-urls @list-shown @site-times)]]]]])))
-
-
 
 
 (defn div-sitetimes []
