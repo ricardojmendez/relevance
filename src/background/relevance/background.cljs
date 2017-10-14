@@ -285,7 +285,7 @@
     (let [{:keys [message sender]} (keywordize-keys payload)
           {:keys [action data]} message]
       ; (console/log "GOT INTERNAL MESSAGE" message "from" sender)
-      (condp = (keyword action)
+      (case (keyword action)
         :reload-data (go (dispatch [:data-load (<! (io/load :data)) (<! (io/load :settings))]))
         :delete-url (dispatch [:delete-url data])
         (console/error "Nothing matched" message)))

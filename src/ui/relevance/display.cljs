@@ -166,7 +166,7 @@
     (fn []
       [:div {:class "navbar-header"}
        [:a {:class "navbar-brand"}
-        (condp = @section
+        (case @section
           :intro "About Relevance"
           :url-times "Time reading a page"
           :site-times "Time visiting a site"

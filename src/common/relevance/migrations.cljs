@@ -9,7 +9,7 @@
   "Migrates a data set from its version to the next one. Returns the same
   data set if it cannot apply any migration."
   [data]
-  (condp = (:data-version data)
+  (case (:data-version data)
     nil (->
           data
           (assoc :instance-id (or (:instance-id data)
