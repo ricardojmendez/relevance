@@ -437,15 +437,22 @@
                 {:url   "http://www.kitco.com/market/"
                  :time  4
                  :ts    1446051494575
+                 :title "New York spot price Gold..."}
+                -24505671
+                {:url   "http://kitco.com/market/"
+                 :time  2
+                 :ts    1446051494575
                  :title "New York spot price Gold..."}}
           acc  (data/accumulate-site-times data)]
       ;; There should be no empty hostnames
       ;; We check (get acc 0) because the result is indexed by the host-key,
       ;; which returns 0 on nil or empty.
       (is (nil? (get acc 0)))
-      ;; Let's verify we got the right data
-      (is (= {971841386  {:time 39, :icon nil, :host "numergent.com"},
-              -915908674 {:time 4, :icon nil, :host "www.kitco.com"}}
+      ;; Let's verify we got the right data. Notice that accumulate-site-times
+      ;; does not take into account differences in the root domain.
+      (is (= {971841386  {:time 39 :icon nil :host "numergent.com"}
+              -915908674 {:time 4 :icon nil :host "www.kitco.com"}
+              996869973  {:time 2 :icon nil :host "kitco.com"}}
              acc))))
   (testing "Accumulate site times disregards the port for the URL when accumulating"
     (let [data {2080624698
@@ -482,7 +489,41 @@
       (is (= {971841386   {:time 27 :icon nil :host "numergent.com"}
               -915908674  {:time 4 :icon nil :host "www.kitco.com"}
               -1536293812 {:time 37 :icon nil :host "google.com"}}
-             acc))))
+             acc)))))
+
+(deftest test-accumulate-root-times
+  (let [data       {2080624698
+                    {:url   "/tags/khroma/"
+                     :time  117
+                     :ts    1445964037798
+                     :title "Khroma articles"}
+                    -526558523
+                    {:url   "https://numergent.com/opensource/"
+                     :time  27
+                     :ts    1445964037798
+                     :title "Open source projects"}
+                    -327774960
+                    {:url   "https://www.numergent.com/tags/khroma/"
+                     :time  12
+                     :ts    1445964037798
+                     :title "Khroma articles"}
+                    1917381154
+                    {:url   "http://www.kitco.com/market/"
+                     :time  4
+                     :ts    1446051494575
+                     :title "New York spot price Gold..."}
+                    -24505671
+                    {:url   "http://KITCO.com/market/"
+                     :time  3
+                     :ts    1446051494575
+                     :title "New York spot price Gold..."}}
+        site-times (data/accumulate-site-times data)
+        root-times (data/accumulate-root-times site-times)]
+    (testing "Accumulate root times takes into lumps together pages on the same root"
+      (is (= {"numergent.com" 39
+              "kitco.com"     7}
+             root-times))))
+
   )
 
 

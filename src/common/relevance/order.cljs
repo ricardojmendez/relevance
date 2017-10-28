@@ -35,11 +35,11 @@
                         is-penalized? (max url-time 1)
                         ;; ... otherwise we just go with the raw URL time
                         :else url-time)
-        site-time     (or (:time (get site-times (host-key (hostname url)))) 0)
-        total         (+ tab-time site-time)
+        host-time     (or (:time (get site-times (host-key (hostname url)))) 0)
+        total         (+ tab-time host-time)
         score         (if is-penalized? (* total non-http-penalty) total)]
     (or (when (pos? tab-time) score)
-        (- site-time idx))))
+        (- host-time idx))))
 
 
 (defn score-tabs
