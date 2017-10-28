@@ -14,7 +14,7 @@
             [khroma.tabs :as tabs]
             [khroma.runtime :as runtime]
             [khroma.windows :as windows]
-            [re-frame.core :refer [dispatch reg-event-db reg-event-fx subscribe dispatch-sync]]
+            [re-frame.core :refer [dispatch reg-event-db subscribe dispatch-sync]]
             [khroma.extension :as ext]
             [khroma.browser-action :as browser]
             [khroma.storage :as storage])
@@ -215,17 +215,17 @@
       app-state)))
 
 
-(reg-event-fx
+(reg-event-db
   :handle-deactivation
   (fn
     ;; We get two parameters: the tab, and optionally the time at which it
     ;; was deactivated (which defaults to now)
-    [_ [_ tab end-time]]
+    [app-state [_ tab end-time]]
     ; (console/trace " Deactivating " tab)
     (when (pos? (:start-time tab))
       (dispatch [:track-time tab (- (or end-time (now))
                                     (:start-time tab))]))
-    nil))
+    app-state))
 
 
 (reg-event-db
@@ -253,35 +253,35 @@
 
 
 
-(reg-event-fx
+(reg-event-db
   ::on-alarm
-  (fn [{:keys [db]} [_ {:keys [alarm]}]]
+  (fn [app-state [_ {:keys [alarm]}]]
     (when (= window-alarm (:name alarm))
-      (check-window-status (:active-tab db)))
-    nil))
+      (check-window-status (:active-tab app-state)))
+    app-state))
 
 
 (reg-event-db
   ::on-clicked-button
-  (fn [{:keys [db]} [_ {:keys [tab]}]]
+  (fn [app-state [_ {:keys [tab]}]]
     ;; Force it to track the time up until now
-    (let [active-tab (:active-tab db)]
+    (let [active-tab (:active-tab app-state)]
       (dispatch [:handle-deactivation active-tab])
       (dispatch [:handle-activation active-tab]))
     (dispatch [:on-relevance-sort-tabs tab])
-    nil))
+    app-state))
 
 
-(reg-event-fx
+(reg-event-db
   ::on-clicked-menu
-  (fn [_ [_ {:keys [info tab]}]]
+  (fn [app-state [_ {:keys [info tab]}]]
     (dispatch [(keyword (:menuItemId info)) tab])
-    nil))
+    app-state))
 
 
-(reg-event-fx
+(reg-event-db
   ::on-message
-  (fn [+ [_ payload]]
+  (fn [app-state [_ payload]]
     (let [{:keys [message sender]} (keywordize-keys payload)
           {:keys [action data]} message]
       ; (console/log "GOT INTERNAL MESSAGE" message "from" sender)
@@ -289,31 +289,31 @@
         :reload-data (go (dispatch [:data-load (<! (io/load :data)) (<! (io/load :settings))]))
         :delete-url (dispatch [:delete-url data])
         (console/error "Nothing matched" message)))
-    nil))
+    app-state))
 
 
 
-(reg-event-fx
+(reg-event-db
   :on-relevance-show-data
-  (fn [_ _]
+  (fn [app-state [_]]
     (open-results-tab)
-    nil))
+    app-state))
 
 
-(reg-event-fx
+(reg-event-db
   :on-relevance-sort-tabs
-  (fn [{:keys [db]} [_ tab]]
-    (sort-tabs! (:windowId tab) db)
-    nil))
+  (fn [app-state [_ tab]]
+    (sort-tabs! (:windowId tab) app-state)
+    app-state))
 
 
-(reg-event-fx
+(reg-event-db
   :suspend
   ;; The message itself is not relevant, we only care that we are being suspended
-  (fn [{:keys [db]} _]
+  (fn [app-state [_]]
     (dispatch [:data-set :suspend-info {:time       (now)
-                                        :active-tab (:active-tab db)}])
-    nil))
+                                        :active-tab (:active-tab app-state)}])
+    app-state))
 
 
 (reg-event-db
