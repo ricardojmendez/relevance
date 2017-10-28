@@ -4,7 +4,7 @@
             [relevance.data :as data]
             [relevance.io :as io]
             [relevance.migrations :as migrations]
-            [relevance.order :refer [time-score score-tabs]]
+            [relevance.order :refer [time-score sort-by-root]]
             [relevance.utils :refer [on-channel url-key host-key hostname is-http? ms-day]]
             [relevance.settings :refer [default-settings]]
             [khroma.alarms :as alarms]
@@ -101,10 +101,10 @@
   (go
     (let [{:keys [settings data]} app-state
           {:keys [url-times site-times]} data
-          tabs (score-tabs (:tabs (<! (windows/get window-id)))
-                           url-times
-                           site-times
-                           settings)]
+          tabs (sort-by-root (:tabs (<! (windows/get window-id)))
+                             url-times
+                             site-times
+                             settings)]
       (doseq [tab tabs]
         (tabs/move (:id tab) {:index (:index tab)})))))
 

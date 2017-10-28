@@ -522,9 +522,7 @@
     (testing "Accumulate root times takes into lumps together pages on the same root"
       (is (= {"numergent.com" 39
               "kitco.com"     7}
-             root-times))))
-
-  )
+             root-times)))))
 
 
 (deftest test-accumulate-after-clean-up
