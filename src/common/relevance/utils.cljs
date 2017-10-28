@@ -90,12 +90,11 @@
   "Split a string using commas, semi-colons or new lines, trims the resulting
   elements, and returns them as a set"
   [s]
-  (->>
-    (string/split (or s "") #",|\n|;| ")
-    (map string/trim)
-    (remove empty?)
-    (map string/lower-case)
-    (into #{})))
+  (->> (string/split (lower-case (or s ""))
+                     #",|\n|;| ")
+       (map string/trim)
+       (remove empty?)
+       (into #{})))
 
 (defn time-display
   "Returns a display string for a number of seconds"
