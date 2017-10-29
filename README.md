@@ -4,9 +4,9 @@ Relevance is a smart tab organizer for Chrome, written in ClojureScript.
 
 It’ll create a natural arrangement where the tabs you have spent the longest on, which are expected to be the most relevant, are placed first, and the ones you haven’t read at all are shunted to the end of your list.
 
-[You can read more about it here](https://numergent.com/relevance/).
+[You can read more about it here](https://numergent.com/relevance/), which includes a changelog.
 
-This is Relevance 1.0.10.
+This is Relevance 1.1.0.
 
 # Building
 
@@ -47,7 +47,7 @@ lein with-profile test doo
 
 I'm using [Gitlab CI](https://gitlab.com/ricardojmendez/relevance/pipelines) to test Relevance.
 
-[![build status](https://gitlab.com/ricardojmendez/relevance/badges/develop/build.svg)](https://gitlab.com/ricardojmendez/relevance/commits/develop)
+[![build status](https://gitlab.com/Numergent/relevance/badges/develop/build.svg)](https://gitlab.com/Numergent/relevance/commits/develop)
 
 I've had some issues with Travis builds failing to get dependencies, so I decided to deprecate it.
 

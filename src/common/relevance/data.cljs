@@ -1,5 +1,8 @@
 (ns relevance.data
-  (:require [relevance.utils :refer [url-key is-http? host-key hostname]]
+  "Contains functions related to data tracking and accumulation.
+  It does not account for the actual ordering based on this data. You should
+  see `relevance.order` for that."
+  (:require [relevance.utils :refer [url-key is-http? host-key hostname root]]
             [khroma.log :as console]))
 
 
@@ -7,7 +10,14 @@
   "Accumulates the total time for a site from a hashmap of URL times.
 
   Returns a hashmap with the URL ID as the key, and the :time, :icon and
-  :host string on its value."
+  :host string on its value.
+
+  This function differentiates between hostnames on the different root domain.
+  This means that docs.gitlab.com and gitlab.com are accumulated separately.
+  
+  While we could lump them together into one at this point, keeping them
+  separately will allows us to apply the same weight to pages on the same
+  hostname, which will lead to more natural ordering."
   [url-times]
   (->>
     (group-by #(hostname (:url %)) (vals url-times))
@@ -18,6 +28,19 @@
                             :icon (:icon (first (val %))))))
     (into {})))
 
+
+(defn accumulate-root-times
+  "Expects the hashmap resulting from `accumulate-site-times`, and returns a
+  new hashmap where times are accumulated by the root name.
+
+  This will let us prioritize the pages in the same root domain together,
+  while still keeping the per-site ordering."
+  [site-times]
+  (->> (group-by #(root (:host %)) (vals site-times))
+       (remove #(empty? (key %)))
+       (map #(vector (key %)
+                     (apply + (map :time (val %)))))
+       (into {})))
 
 
 

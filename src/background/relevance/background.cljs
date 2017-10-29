@@ -4,7 +4,7 @@
             [relevance.data :as data]
             [relevance.io :as io]
             [relevance.migrations :as migrations]
-            [relevance.order :refer [time-score score-tabs]]
+            [relevance.order :refer [time-score sort-by-root]]
             [relevance.utils :refer [on-channel url-key host-key hostname is-http? ms-day]]
             [relevance.settings :refer [default-settings]]
             [khroma.alarms :as alarms]
@@ -101,10 +101,10 @@
   (go
     (let [{:keys [settings data]} app-state
           {:keys [url-times site-times]} data
-          tabs (score-tabs (:tabs (<! (windows/get window-id)))
-                           url-times
-                           site-times
-                           settings)]
+          tabs (sort-by-root (:tabs (<! (windows/get window-id)))
+                             url-times
+                             site-times
+                             settings)]
       (doseq [tab tabs]
         (tabs/move (:id tab) {:index (:index tab)})))))
 
@@ -285,7 +285,7 @@
     (let [{:keys [message sender]} (keywordize-keys payload)
           {:keys [action data]} message]
       ; (console/log "GOT INTERNAL MESSAGE" message "from" sender)
-      (condp = (keyword action)
+      (case (keyword action)
         :reload-data (go (dispatch [:data-load (<! (io/load :data)) (<! (io/load :settings))]))
         :delete-url (dispatch [:delete-url data])
         (console/error "Nothing matched" message)))

@@ -166,7 +166,7 @@
     (fn []
       [:div {:class "navbar-header"}
        [:a {:class "navbar-brand"}
-        (condp = @section
+        (case @section
           :intro "About Relevance"
           :url-times "Time reading a page"
           :site-times "Time visiting a site"
@@ -328,7 +328,7 @@
    [:div {:class "page-header col-sm-10 col-sm-offset-1"}
     [:h1 "Welcome!"]]
    [:div {:class "col-sm-10 col-sm-offset-1"}
-    [:h2 "Thanks for installing Relevance 1.0.10"]
+    [:h2 "Thanks for installing Relevance 1.1.0"]
     [:p [:a {:href "https://numergent.com/relevance/" :target "_blank"} "You can read about the latest changes here."]]
     [:p "Relevance will help you sort your tabs when you have too many of them open. Here's how to use it:"]
     [:ul

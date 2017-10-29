@@ -9,12 +9,15 @@
 ;;;; can just have a separate namespace for data transformations
 
 (defn save-raw
-  "Saves the data raw, without converting it to transit first."
+  "Saves the data raw, without converting it to transit first. Will pass
+  the optional callback function it receives to storage/set for notification
+  when the operation has completed."
   [id data callback]
   (storage/set {id data} storage/local callback))
 
 (defn save
-  "Saves our data on the extension's storage after converting it to transit."
+  "Saves our data on the extension's storage after converting it to transit.
+  Can optionally receive a callback function for when storage/set completes."
   ([id data]
    (save id data nil))
   ([id data callback]
