@@ -6,7 +6,7 @@ It’ll create a natural arrangement where the tabs you have spent the longest o
 
 [You can read more about it here](https://numergent.com/relevance/), which includes a changelog.
 
-This is Relevance 1.1.0-SNAPSHOT.
+This is Relevance 1.1.0.
 
 # Building
 
