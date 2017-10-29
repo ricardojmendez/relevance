@@ -52,6 +52,14 @@
         lower-case
         trim)))
 
+(defn root
+  "Returns the root domain for a host"
+  [host]
+  (->> (string/split (lower-case (or host ""))
+                     #"\.")
+       (take-last 2)
+       (string/join ".")))
+
 (defn protocol
   "Returns the protocol for a URL"
   [url]
@@ -67,7 +75,9 @@
   (and (some? url)
        (some? (re-find #"\bhttps?:" (protocol url)))))
 
-(defn host-key [host]
+(defn host-key
+  "Returns a key for a hostname, or 0 if the hostname is empty"
+  [host]
   (if (not-empty host)
     (hash-string (trim (lower-case host)))
     0))
@@ -90,12 +100,11 @@
   "Split a string using commas, semi-colons or new lines, trims the resulting
   elements, and returns them as a set"
   [s]
-  (->>
-    (string/split (or s "") #",|\n|;| ")
-    (map string/trim)
-    (remove empty?)
-    (map string/lower-case)
-    (into #{})))
+  (->> (string/split (lower-case (or s ""))
+                     #",|\n|;| ")
+       (map string/trim)
+       (remove empty?)
+       (into #{})))
 
 (defn time-display
   "Returns a display string for a number of seconds"

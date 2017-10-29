@@ -4,9 +4,9 @@ Relevance is a smart tab organizer for Chrome, written in ClojureScript.
 
 It’ll create a natural arrangement where the tabs you have spent the longest on, which are expected to be the most relevant, are placed first, and the ones you haven’t read at all are shunted to the end of your list.
 
-[You can read more about it here](https://numergent.com/relevance/).
+[You can read more about it here](https://numergent.com/relevance/), which includes a changelog.
 
-This is Relevance 1.0.11-SNAPSHOT.
+This is Relevance 1.1.0-SNAPSHOT.
 
 # Building
 

@@ -99,6 +99,17 @@
                   ))
 
 
+(deftest test-root
+  (are [host name] (= (utils/root host) name)
+                   "www.google.com" "google.com"
+                   "WWW.google.COM" "google.com"
+                   "some.sub.domain.com" "domain.com"
+                   "localhost" "localhost"
+                   "" ""
+                   nil ""
+                   ))
+
+
 (deftest test-protocol
   (are [url name] (= (utils/protocol url) name)
                   "https://www.google.com" "https:"
