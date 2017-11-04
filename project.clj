@@ -1,4 +1,4 @@
-(defproject relevance-chrome "1.1.0"
+(defproject relevance-chrome "1.1.1-SNAPSHOT"
   :license {:name "MIT License"
             :url  "https://tldrlegal.com/license/mit-license"}
   :dependencies [[org.clojure/clojure "1.8.0"]
